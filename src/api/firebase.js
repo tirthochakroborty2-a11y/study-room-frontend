@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -11,15 +16,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Google Provider extra config
+// ⚠️ Persistence Set - Login State Browser Restart এর পরও থাকবে
+setPersistence(auth, browserLocalPersistence)
+  .catch((error) => {
+    console.error('Auth Persistence Error:', error);
+  });
+
+// Google Provider Config
 googleProvider.setCustomParameters({
   prompt: 'select_account',
 });

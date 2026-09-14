@@ -27,9 +27,15 @@ export const AuthProvider = ({ children }) => {
   // Google Login
   const loginWithGoogle = async () => {
     try {
+      setLoading(true);
+
       const result = await signInWithPopup(auth, googleProvider);
       const loggedUser = result.user;
 
+      // ⚠️ IMPORTANT: আগে user set করি
+      setUser(loggedUser);
+
+      // Firestore এ User Document Check/Create
       const userRef = doc(db, 'users', loggedUser.uid);
       const userSnap = await getDoc(userRef);
 
@@ -60,8 +66,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       setLoginModalOpen(false);
+      setLoading(false);
 
-      // সুন্দর Success Toast
       toast.success(
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img
@@ -93,13 +99,14 @@ export const AuthProvider = ({ children }) => {
             padding: '12px 16px',
             boxShadow: '0 10px 40px rgba(34, 197, 94, 0.25)',
           },
-          icon: '✅',
         }
       );
 
       return { success: true, user: loggedUser };
     } catch (error) {
       console.error('Login error:', error);
+      setLoading(false);
+
       if (error.code !== 'auth/popup-closed-by-user') {
         toast.error(
           <div>
@@ -151,9 +158,7 @@ export const AuthProvider = ({ children }) => {
             border: '2px solid #6C63FF',
             borderRadius: '14px',
             padding: '12px 16px',
-            boxShadow: '0 10px 40px rgba(108, 99, 255, 0.20)',
           },
-          icon: '👋',
         }
       );
     } catch (error) {
@@ -161,7 +166,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login Required - show modal
+  // Login Required Modal
   const requireLogin = (message = 'এই কাজটি করতে লগইন করুন') => {
     toast.error(
       <div>
@@ -180,7 +185,6 @@ export const AuthProvider = ({ children }) => {
           border: '2px solid #FFC857',
           borderRadius: '14px',
           padding: '12px 16px',
-          boxShadow: '0 10px 40px rgba(255, 200, 87, 0.30)',
         },
       }
     );
@@ -189,6 +193,7 @@ export const AuthProvider = ({ children }) => {
 
   const closeLoginModal = () => setLoginModalOpen(false);
 
+  // ⚠️ Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
