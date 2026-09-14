@@ -13,7 +13,11 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminSidebar from '../../components/admin/AdminSidebar';
-import { getAllUsers, toggleBlockUser, changeUserRole } from '../../api/adminApi';
+import {
+  getAllUsers,
+  toggleBlockUser,
+  changeUserRole,
+} from '../../api/adminApi';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -218,7 +222,7 @@ const AdminUsers = () => {
               </div>
             </div>
 
-            {/* Users List */}
+            {/* Users Grid */}
             {loading ? (
               <div style={{
                 background: 'white',
@@ -354,7 +358,11 @@ const AdminUsers = () => {
                         alignItems: 'center',
                         gap: '3px',
                       }}>
-                        {user.role === 'admin' ? <><Crown size={10} /> Admin</> : <><UserIcon size={10} /> User</>}
+                        {user.role === 'admin' ? (
+                          <><Crown size={10} /> Admin</>
+                        ) : (
+                          <><UserIcon size={10} /> User</>
+                        )}
                       </span>
                       {user.isBlocked && (
                         <span style={{
@@ -437,7 +445,11 @@ const AdminUsers = () => {
                           justifyContent: 'center',
                         }}
                       >
-                        {user.isBlocked ? <CheckCircle2 size={16} /> : <Ban size={16} />}
+                        {user.isBlocked ? (
+                          <CheckCircle2 size={16} />
+                        ) : (
+                          <Ban size={16} />
+                        )}
                       </button>
 
                       <button
@@ -476,7 +488,6 @@ const AdminUsers = () => {
   );
 };
 
-// Helper
 const StatMini = ({ icon, label, value, small }) => (
   <div style={{ textAlign: 'center', minWidth: 0 }}>
     <div style={{

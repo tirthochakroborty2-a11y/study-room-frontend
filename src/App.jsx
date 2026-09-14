@@ -28,13 +28,13 @@ function App() {
       <Header />
       <main style={{ flex: 1, paddingTop: '70px' }}>
         <Routes>
-          {/* Public Routes */}
+          {/* ==================== PUBLIC ROUTES ==================== */}
           <Route path="/" element={<Home />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/course/:id" element={<CourseDetails />} />
           <Route path="/about" element={<About />} />
 
-          {/* Protected Routes (Login Required) */}
+          {/* ==================== PROTECTED ROUTES ==================== */}
           <Route
             path="/payment"
             element={
@@ -60,7 +60,7 @@ function App() {
             }
           />
 
-          {/* Admin Routes (Admin Only) */}
+          {/* ==================== ADMIN ROUTES ==================== */}
           <Route
             path="/admin"
             element={
@@ -102,7 +102,7 @@ function App() {
             }
           />
 
-          {/* 404 */}
+          {/* ==================== 404 ==================== */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
