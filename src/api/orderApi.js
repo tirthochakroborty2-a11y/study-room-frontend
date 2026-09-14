@@ -41,14 +41,95 @@ export const createOrder = async (orderData) => {
       approvedAt: null,
     };
 
+    // Save Order to Firestore
     const docRef = await addDoc(collection(db, 'orders'), order);
 
-    const userRef = doc(db, 'users', orderData.userId);
-    await updateDoc(userRef, { totalOrders: increment(1) });
+    // Update User totalOrders (Optional)
+    try {
+      const userRef = doc(db, 'users', orderData.userId);
+      await updateDoc(userRef, { totalOrders: increment(1) });
+    } catch (userUpdateError) {
+      console.log('User update failed (non-critical):', userUpdateError.message);
+    }
 
     return { success: true, orderId, docId: docRef.id };
   } catch (error) {
     console.error('Error creating order:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ==================== Send Telegram Notification to Admin ====================
+export const sendTelegramNotification = async (orderData) => {
+  const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+  const CHAT_ID = import.meta.env.VITE_TELEGRAM_ADMIN_CHAT_ID;
+
+  // Check Config
+  if (!BOT_TOKEN || !CHAT_ID) {
+    console.log('⚠️ Telegram config missing');
+    return { success: false, error: 'Config missing' };
+  }
+
+  if (BOT_TOKEN.includes('xxxx') || BOT_TOKEN.includes('YOUR')) {
+    console.log('⚠️ Telegram Token is placeholder');
+    return { success: false, error: 'Token placeholder' };
+  }
+
+  // Build Message
+  const message = `
+🔔 <b>নতুন Order এসেছে!</b>
+━━━━━━━━━━━━━━━━━
+🧾 <b>Order:</b> ${orderData.orderId}
+👤 <b>User:</b> ${orderData.userName}
+📧 <b>Email:</b> ${orderData.userEmail}
+📚 <b>Course:</b> ${orderData.courseName}
+💰 <b>Amount:</b> ৳${orderData.finalPrice}${orderData.discount > 0 ? ` (ছাড় ৳${orderData.discount})` : ''}
+${orderData.couponCode ? `🎟️ <b>Coupon:</b> ${orderData.couponCode}\n` : ''}━━━━━━━━━━━━━━━━━
+🏦 <b>Payment:</b> ${orderData.paymentMethod}
+📱 <b>Sender:</b> ${orderData.senderNumber}
+🧾 <b>TRX ID:</b> ${orderData.trxId}
+📱 <b>Telegram:</b> ${orderData.telegramUsername}
+━━━━━━━━━━━━━━━━━
+⏳ <b>Status:</b> Pending
+`.trim();
+
+  // Send to Telegram
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: message,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: '👁 Admin Panel এ দেখুন',
+                  url: 'https://study-room-frontend-bay.vercel.app/admin/orders',
+                },
+              ],
+            ],
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.ok) {
+      console.log('✅ Telegram notification sent');
+      return { success: true };
+    } else {
+      console.error('❌ Telegram error:', data.description);
+      return { success: false, error: data.description };
+    }
+  } catch (error) {
+    console.error('❌ Telegram fetch error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -100,10 +181,4 @@ export const getOrderById = async (docId) => {
     console.error('Error fetching order:', error);
     return { success: false, error: error.message };
   }
-};
-
-// ==================== Telegram Notification (Placeholder) ====================
-export const sendTelegramNotification = async (orderData) => {
-  console.log('📱 Telegram notification:', orderData);
-  return { success: true };
 };
