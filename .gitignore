@@ -1,0 +1,26 @@
+# Dependencies
+node_modules
+
+# Build
+dist
+dist-ssr
+
+# Env Files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+
+# Backup Files
+*.backup.jsx
+*.backup.js
+*.bak
+
+# Editor
+.vscode/*
+.idea
+.DS_Store
+*.sw?
