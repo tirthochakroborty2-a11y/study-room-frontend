@@ -18,26 +18,45 @@ export const useAuth = () => {
   return context;
 };
 
+// ⚠️ Wait for Auth State to Sync
+const waitForAuth = () => {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-  // Google Login
+  // ==================== GOOGLE LOGIN ====================
   const loginWithGoogle = async () => {
-    try {
-      setLoading(true);
+    if (loginLoading) return { success: false, error: 'Already logging in' };
 
+    try {
+      setLoginLoading(true);
+
+      console.log('🔐 Starting Google Login...');
       const result = await signInWithPopup(auth, googleProvider);
       const loggedUser = result.user;
+      console.log('✅ Popup Success:', loggedUser.email);
 
-      // ⚠️ IMPORTANT: আগে user set করি
-      setUser(loggedUser);
+      // ⚠️ CRITICAL: Wait for Auth State to Sync
+      const syncedUser = await waitForAuth();
+      console.log('🔄 Auth State Synced:', syncedUser?.email);
 
-      // Firestore এ User Document Check/Create
+      // ⚠️ Set User Immediately
+      setUser(syncedUser || loggedUser);
+
+      // Firestore User Document Check/Create
       const userRef = doc(db, 'users', loggedUser.uid);
-      const userSnap = await getDoc(userRef);
+      let userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
         const newUserData = {
@@ -55,6 +74,7 @@ export const AuthProvider = ({ children }) => {
         };
         await setDoc(userRef, newUserData);
         setUserData(newUserData);
+        console.log('✅ New User Created');
       } else {
         const existingData = userSnap.data();
         await setDoc(
@@ -63,9 +83,11 @@ export const AuthProvider = ({ children }) => {
           { merge: true }
         );
         setUserData({ ...existingData, lastLogin: new Date() });
+        console.log('✅ Existing User Updated');
       }
 
       setLoginModalOpen(false);
+      setLoginLoading(false);
       setLoading(false);
 
       toast.success(
@@ -104,7 +126,8 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user: loggedUser };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
+      setLoginLoading(false);
       setLoading(false);
 
       if (error.code !== 'auth/popup-closed-by-user') {
@@ -133,13 +156,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
+  // ==================== LOGOUT ====================
   const logout = async () => {
     try {
       const name = user?.displayName;
-      await signOut(auth);
+
+      // ⚠️ Clear state first
       setUser(null);
       setUserData(null);
+
+      await signOut(auth);
 
       toast.success(
         <div>
@@ -166,7 +192,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login Required Modal
+  // ==================== REQUIRE LOGIN ====================
   const requireLogin = (message = 'এই কাজটি করতে লগইন করুন') => {
     toast.error(
       <div>
@@ -193,9 +219,10 @@ export const AuthProvider = ({ children }) => {
 
   const closeLoginModal = () => setLoginModalOpen(false);
 
-  // ⚠️ Auth State Listener
+  // ==================== AUTH STATE LISTENER ====================
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log('🔄 Auth State Changed:', currentUser?.email || 'None');
       setUser(currentUser);
 
       if (currentUser) {
@@ -222,6 +249,7 @@ export const AuthProvider = ({ children }) => {
     user,
     userData,
     loading,
+    loginLoading,
     loginWithGoogle,
     logout,
     requireLogin,
