@@ -41,15 +41,13 @@ export const createOrder = async (orderData) => {
       approvedAt: null,
     };
 
-    // Save Order to Firestore
     const docRef = await addDoc(collection(db, 'orders'), order);
 
-    // Update User totalOrders (Optional)
     try {
       const userRef = doc(db, 'users', orderData.userId);
       await updateDoc(userRef, { totalOrders: increment(1) });
     } catch (userUpdateError) {
-      console.log('User update failed (non-critical):', userUpdateError.message);
+      console.log('User update failed:', userUpdateError.message);
     }
 
     return { success: true, orderId, docId: docRef.id };
@@ -59,23 +57,23 @@ export const createOrder = async (orderData) => {
   }
 };
 
-// ==================== Send Telegram Notification to Admin ====================
+// ==================== Send Telegram Notification ====================
 export const sendTelegramNotification = async (orderData) => {
   const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
   const CHAT_ID = import.meta.env.VITE_TELEGRAM_ADMIN_CHAT_ID;
 
-  // Check Config
+  console.log('📱 Telegram Config:', {
+    hasToken: !!BOT_TOKEN,
+    hasChatId: !!CHAT_ID,
+    tokenPreview: BOT_TOKEN ? BOT_TOKEN.substring(0, 15) + '...' : 'missing',
+    chatId: CHAT_ID,
+  });
+
   if (!BOT_TOKEN || !CHAT_ID) {
     console.log('⚠️ Telegram config missing');
     return { success: false, error: 'Config missing' };
   }
 
-  if (BOT_TOKEN.includes('xxxx') || BOT_TOKEN.includes('YOUR')) {
-    console.log('⚠️ Telegram Token is placeholder');
-    return { success: false, error: 'Token placeholder' };
-  }
-
-  // Build Message
   const message = `
 🔔 <b>নতুন Order এসেছে!</b>
 ━━━━━━━━━━━━━━━━━
@@ -93,7 +91,6 @@ ${orderData.couponCode ? `🎟️ <b>Coupon:</b> ${orderData.couponCode}\n` : ''
 ⏳ <b>Status:</b> Pending
 `.trim();
 
-  // Send to Telegram
   try {
     const response = await fetch(
       `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
@@ -120,6 +117,7 @@ ${orderData.couponCode ? `🎟️ <b>Coupon:</b> ${orderData.couponCode}\n` : ''
     );
 
     const data = await response.json();
+    console.log('📱 Telegram Response:', data);
 
     if (data.ok) {
       console.log('✅ Telegram notification sent');
