@@ -1,18 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft,
-  PlayCircle,
-  CheckCircle2,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  List,
-  BookOpen,
-  Clock,
-  Layers,
-  Award,
+  ArrowLeft, PlayCircle, CheckCircle2, FileText, ChevronDown, ChevronRight,
+  BookOpen, Clock, Layers, Award, Lock, AlertCircle,
 } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../api/firebase';
 import { useCourses } from '../context/CourseContext';
 import { useAuth } from '../context/AuthContext';
 import { getClassesByCourse, getChaptersByCourse } from '../api/classApi';
@@ -29,11 +22,53 @@ const CourseClass = () => {
   const [expandedChapters, setExpandedChapters] = useState([]);
   const [completedClasses, setCompletedClasses] = useState([]);
 
+  // ⚠️ Access Verification States
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [accessError, setAccessError] = useState('');
+
   const course = getCourseById(courseId);
 
+  // ==================== ACCESS VERIFICATION ====================
+  useEffect(() => {
+    const verifyAccess = async () => {
+      if (!user || !courseId) {
+        setAccessLoading(false);
+        return;
+      }
+
+      try {
+        // Check if user has an approved order for this course
+        const q = query(
+          collection(db, 'orders'),
+          where('userId', '==', user.uid),
+          where('courseId', '==', parseInt(courseId)),
+          where('status', '==', 'approved')
+        );
+        const snapshot = await getDocs(q);
+
+        if (snapshot.size > 0) {
+          setHasAccess(true);
+        } else {
+          setHasAccess(false);
+          setAccessError('no_order');
+        }
+      } catch (error) {
+        console.error('Access verification error:', error);
+        setHasAccess(false);
+        setAccessError('error');
+      } finally {
+        setAccessLoading(false);
+      }
+    };
+
+    verifyAccess();
+  }, [user, courseId]);
+
+  // ==================== LOAD CLASSES (only if has access) ====================
   useEffect(() => {
     const load = async () => {
-      if (!courseId) return;
+      if (!courseId || !hasAccess) return;
       setLoading(true);
       const [chRes, clRes] = await Promise.all([
         getChaptersByCourse(courseId),
@@ -54,8 +89,9 @@ const CourseClass = () => {
       setLoading(false);
     };
     load();
-  }, [courseId]);
+  }, [courseId, hasAccess]);
 
+  // Load progress
   useEffect(() => {
     if (!user || !courseId) return;
     const key = `progress_${user.uid}_${courseId}`;
@@ -105,16 +141,21 @@ const CourseClass = () => {
     }
   };
 
-  if (coursesLoading || loading) {
+  // ==================== ACCESS VERIFICATION UI ====================
+  if (accessLoading || coursesLoading) {
     return (
       <section style={{
         padding: '150px 20px 60px',
         textAlign: 'center',
         minHeight: '100vh',
       }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'pulse 1.5s infinite' }}>🎓</div>
+        <div style={{
+          fontSize: '48px',
+          marginBottom: '16px',
+          animation: 'pulse 1.5s infinite',
+        }}>🔐</div>
         <p style={{ color: '#6C63FF', fontSize: '15px', fontWeight: '600' }}>
-          লোড হচ্ছে...
+          Access যাচাই করা হচ্ছে...
         </p>
         <style>{`
           @keyframes pulse {
@@ -126,31 +167,193 @@ const CourseClass = () => {
     );
   }
 
+  // Course Not Found
   if (!course) {
     return (
-      <section style={{ padding: '120px 20px 60px', textAlign: 'center', minHeight: '100vh' }}>
+      <section style={{
+        padding: '120px 20px 60px',
+        textAlign: 'center',
+        minHeight: '100vh',
+      }}>
         <div style={{ fontSize: '80px', marginBottom: '20px' }}>😕</div>
-        <h2 style={{ fontSize: '22px', color: '#2D2D3F', marginBottom: '20px' }}>Course পাওয়া যায়নি</h2>
-        <Link to="/my-courses" style={{ color: '#6C63FF', textDecoration: 'none', fontWeight: '600' }}>
-          ← আমার কোর্সে ফিরুন
+        <h2 style={{ fontSize: '22px', color: '#2D2D3F', marginBottom: '20px' }}>
+          Course পাওয়া যায়নি
+        </h2>
+        <Link to="/courses" style={{
+          padding: '12px 28px',
+          background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+          color: 'white',
+          borderRadius: '50px',
+          textDecoration: 'none',
+          fontWeight: '600',
+          fontSize: '14px',
+          display: 'inline-block',
+        }}>
+          ← সব Course দেখুন
         </Link>
       </section>
     );
   }
 
+  // ⚠️ NO ACCESS — Payment বা Approval নেই
+  if (!hasAccess) {
+    return (
+      <section style={{
+        padding: '100px 20px 60px',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #F8F9FE 0%, #EEF2FF 100%)',
+      }}>
+        <div style={{
+          background: 'white',
+          borderRadius: '20px',
+          padding: '50px 30px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: '0 20px 60px rgba(108, 99, 255, 0.15)',
+          border: '2px solid #FEE2E2',
+        }}>
+          {/* Lock Icon */}
+          <div style={{
+            width: '90px',
+            height: '90px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #FEE2E2, #FECACA)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+            fontSize: '40px',
+            boxShadow: '0 10px 30px rgba(239, 68, 68, 0.25)',
+          }}>
+            🔒
+          </div>
+
+          <h2 style={{
+            fontSize: '22px',
+            fontWeight: '800',
+            color: '#2D2D3F',
+            marginBottom: '10px',
+          }}>
+            Access Denied
+          </h2>
+
+          <p style={{
+            fontSize: '14px',
+            color: '#6B7280',
+            lineHeight: '1.7',
+            marginBottom: '24px',
+          }}>
+            {accessError === 'no_order' ? (
+              <>
+                এই Course এর Class দেখতে হলে আগে <strong>Course কিনতে হবে</strong>।
+                {course.type === 'paid' && (
+                  <>
+                    <br />
+                    <br />
+                    <strong>Price: ৳{course.price}</strong>
+                  </>
+                )}
+              </>
+            ) : (
+              'কিছু সমস্যা হয়েছে। আবার চেষ্টা করুন।'
+            )}
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link
+              to={`/course/${course.id}`}
+              style={{
+                padding: '14px',
+                background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+                color: 'white',
+                borderRadius: '50px',
+                textDecoration: 'none',
+                fontWeight: '700',
+                fontSize: '14px',
+                boxShadow: '0 8px 25px rgba(108, 99, 255, 0.30)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <PlayCircle size={18} /> Course দেখুন
+            </Link>
+            <Link
+              to="/my-courses"
+              style={{
+                padding: '12px',
+                background: 'white',
+                color: '#6C63FF',
+                border: '2px solid #6C63FF',
+                borderRadius: '50px',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '13px',
+              }}
+            >
+              আমার কোর্স
+            </Link>
+          </div>
+
+          {/* Info Box */}
+          <div style={{
+            marginTop: '20px',
+            padding: '12px',
+            background: '#F8F9FE',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px',
+            textAlign: 'left',
+          }}>
+            <AlertCircle size={16} color="#6C63FF" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <p style={{
+              fontSize: '11px',
+              color: '#6B7280',
+              lineHeight: '1.6',
+            }}>
+              Course কিনলে Admin Approve করার পর এই Page এ Access পাবেন।
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No Content
   if (chapters.length === 0 || classes.length === 0) {
     return (
-      <section style={{ padding: '120px 20px 60px', textAlign: 'center', minHeight: '100vh' }}>
+      <section style={{
+        padding: '120px 20px 60px',
+        textAlign: 'center',
+        minHeight: '100vh',
+      }}>
         <div style={{ fontSize: '80px', marginBottom: '20px' }}>📹</div>
-        <h2 style={{ fontSize: '22px', color: '#2D2D3F', marginBottom: '12px', fontWeight: '700' }}>
+        <h2 style={{
+          fontSize: '22px',
+          color: '#2D2D3F',
+          marginBottom: '12px',
+          fontWeight: '700',
+        }}>
           এখনো কোনো Class যোগ করা হয়নি
         </h2>
         <Link to="/my-courses" style={{
-          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
           padding: '12px 28px',
           background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-          color: 'white', borderRadius: '50px',
-          textDecoration: 'none', fontWeight: '600', fontSize: '14px', marginTop: '20px',
+          color: 'white',
+          borderRadius: '50px',
+          textDecoration: 'none',
+          fontWeight: '600',
+          fontSize: '14px',
+          marginTop: '20px',
         }}>
           ← আমার কোর্সে ফিরুন
         </Link>
@@ -205,40 +408,25 @@ const CourseClass = () => {
           boxShadow: '0 20px 50px rgba(108, 99, 255, 0.25)',
         }}>
           <div style={{
-            position: 'absolute',
-            top: '-60px',
-            right: '-60px',
-            width: '200px',
-            height: '200px',
-            borderRadius: '50%',
+            position: 'absolute', top: '-60px', right: '-60px',
+            width: '200px', height: '200px', borderRadius: '50%',
             background: 'radial-gradient(circle, rgba(255,255,255,0.20), transparent 70%)',
             pointerEvents: 'none',
           }} />
           <div style={{
-            position: 'absolute',
-            bottom: '-80px',
-            left: '-80px',
-            width: '240px',
-            height: '240px',
-            borderRadius: '50%',
+            position: 'absolute', bottom: '-80px', left: '-80px',
+            width: '240px', height: '240px', borderRadius: '50%',
             background: 'radial-gradient(circle, rgba(255,101,132,0.25), transparent 70%)',
             pointerEvents: 'none',
           }} />
 
           <div style={{
-            display: 'flex',
-            gap: '16px',
-            alignItems: 'center',
-            position: 'relative',
-            zIndex: 1,
-            flexWrap: 'wrap',
+            display: 'flex', gap: '16px', alignItems: 'center',
+            position: 'relative', zIndex: 1, flexWrap: 'wrap',
           }}>
             <div style={{
-              width: '70px',
-              height: '70px',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              flexShrink: 0,
+              width: '70px', height: '70px', borderRadius: '16px',
+              overflow: 'hidden', flexShrink: 0,
               border: '3px solid rgba(255,255,255,0.3)',
               background: 'white',
             }}>
@@ -252,35 +440,24 @@ const CourseClass = () => {
 
             <div style={{ flex: 1, minWidth: '200px' }}>
               <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
                 padding: '3px 10px',
                 background: 'rgba(255,255,255,0.20)',
-                borderRadius: '50px',
-                fontSize: '11px',
-                fontWeight: '700',
-                color: 'white',
-                marginBottom: '8px',
-                backdropFilter: 'blur(10px)',
+                borderRadius: '50px', fontSize: '11px',
+                fontWeight: '700', color: 'white', marginBottom: '8px',
               }}>
                 <Award size={11} /> Premium Course
               </div>
               <h1 style={{
                 fontSize: 'clamp(17px, 3vw, 22px)',
-                fontWeight: '800',
-                color: 'white',
-                marginBottom: '8px',
-                lineHeight: '1.3',
+                fontWeight: '800', color: 'white',
+                marginBottom: '8px', lineHeight: '1.3',
               }}>
                 {course.name}
               </h1>
               <div style={{
-                display: 'flex',
-                gap: '14px',
-                flexWrap: 'wrap',
-                fontSize: '12px',
-                color: 'rgba(255,255,255,0.85)',
+                display: 'flex', gap: '14px', flexWrap: 'wrap',
+                fontSize: '12px', color: 'rgba(255,255,255,0.85)',
                 fontWeight: '600',
               }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -296,51 +473,42 @@ const CourseClass = () => {
             </div>
           </div>
 
-          {/* Progress Bar */}
+          {/* Progress */}
           <div style={{ marginTop: '20px', position: 'relative', zIndex: 1 }}>
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '12px',
-              color: 'rgba(255,255,255,0.9)',
-              fontWeight: '700',
-              marginBottom: '8px',
+              display: 'flex', justifyContent: 'space-between',
+              fontSize: '12px', color: 'rgba(255,255,255,0.9)',
+              fontWeight: '700', marginBottom: '8px',
             }}>
               <span>📊 আপনার Progress</span>
               <span>{completedClasses.length} / {classes.length} ({progressPercent}%)</span>
             </div>
             <div style={{
-              height: '10px',
-              background: 'rgba(255,255,255,0.20)',
-              borderRadius: '50px',
-              overflow: 'hidden',
+              height: '10px', background: 'rgba(255,255,255,0.20)',
+              borderRadius: '50px', overflow: 'hidden',
             }}>
               <div style={{
-                height: '100%',
-                width: `${progressPercent}%`,
+                height: '100%', width: `${progressPercent}%`,
                 background: 'linear-gradient(90deg, #FFC857, #FF6584)',
-                borderRadius: '50px',
-                transition: 'width 0.5s ease',
+                borderRadius: '50px', transition: 'width 0.5s ease',
                 boxShadow: '0 0 20px rgba(255, 200, 87, 0.5)',
               }} />
             </div>
           </div>
         </div>
 
-        {/* Main Layout */}
+        {/* Layout */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: activeClass ? 'minmax(0, 2fr) minmax(280px, 1fr)' : '1fr',
+          gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
           gap: '20px',
         }} className="class-layout">
-          {/* LEFT: Video Player */}
+          {/* LEFT: Video */}
           {activeClass ? (
             <div style={{ minWidth: 0 }}>
               <div style={{
-                background: 'black',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                position: 'relative',
+                background: 'black', borderRadius: '16px',
+                overflow: 'hidden', position: 'relative',
                 aspectRatio: '16/9',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.30)',
               }}>
@@ -352,52 +520,34 @@ const CourseClass = () => {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    border: 0,
+                    position: 'absolute', top: 0, left: 0,
+                    width: '100%', height: '100%', border: 0,
                   }}
                 />
               </div>
 
-              {/* Class Info Card */}
               <div style={{
-                background: 'white',
-                borderRadius: '16px',
-                padding: '20px',
-                marginTop: '16px',
+                background: 'white', borderRadius: '16px',
+                padding: '20px', marginTop: '16px',
                 boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
               }}>
                 <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  flexWrap: 'wrap',
-                  marginBottom: '14px',
+                  display: 'flex', justifyContent: 'space-between',
+                  gap: '10px', flexWrap: 'wrap', marginBottom: '14px',
                 }}>
                   <div style={{ flex: 1, minWidth: '200px' }}>
                     <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
                       padding: '3px 10px',
                       background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)',
-                      color: '#6C63FF',
-                      borderRadius: '50px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      marginBottom: '8px',
+                      color: '#6C63FF', borderRadius: '50px',
+                      fontSize: '11px', fontWeight: '700', marginBottom: '8px',
                     }}>
                       <PlayCircle size={11} /> এখন চলছে
                     </div>
                     <h2 style={{
-                      fontSize: '18px',
-                      fontWeight: '800',
-                      color: '#2D2D3F',
-                      lineHeight: '1.3',
-                      marginBottom: '5px',
+                      fontSize: '18px', fontWeight: '800',
+                      color: '#2D2D3F', lineHeight: '1.3', marginBottom: '5px',
                     }}>
                       {activeClass.title}
                     </h2>
@@ -414,45 +564,31 @@ const CourseClass = () => {
                     style={{
                       padding: '10px 18px',
                       background: completedClasses.includes(activeClass.docId)
-                        ? '#DCFCE7'
-                        : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                        ? '#DCFCE7' : 'linear-gradient(135deg, #22c55e, #16a34a)',
                       color: completedClasses.includes(activeClass.docId)
-                        ? '#166534'
-                        : 'white',
-                      border: 'none',
-                      borderRadius: '50px',
-                      fontSize: '12px',
-                      fontWeight: '700',
+                        ? '#166534' : 'white',
+                      border: 'none', borderRadius: '50px',
+                      fontSize: '12px', fontWeight: '700',
                       cursor: completedClasses.includes(activeClass.docId)
-                        ? 'default'
-                        : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
+                        ? 'default' : 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '5px',
                       boxShadow: completedClasses.includes(activeClass.docId)
-                        ? 'none'
-                        : '0 6px 20px rgba(34, 197, 94, 0.30)',
+                        ? 'none' : '0 6px 20px rgba(34, 197, 94, 0.30)',
                       flexShrink: 0,
                     }}
                   >
                     <CheckCircle2 size={13} />
-                    {completedClasses.includes(activeClass.docId)
-                      ? 'সম্পন্ন ✅'
-                      : 'Complete'}
+                    {completedClasses.includes(activeClass.docId) ? 'সম্পন্ন ✅' : 'Complete'}
                   </button>
                 </div>
 
                 {activeClass.description && (
                   <div style={{
-                    padding: '14px',
-                    background: '#F8F9FE',
-                    borderRadius: '10px',
-                    marginBottom: '14px',
+                    padding: '14px', background: '#F8F9FE',
+                    borderRadius: '10px', marginBottom: '14px',
                   }}>
                     <p style={{
-                      fontSize: '13px',
-                      color: '#4B5563',
-                      lineHeight: '1.7',
+                      fontSize: '13px', color: '#4B5563', lineHeight: '1.7',
                     }}>
                       {activeClass.description}
                     </p>
@@ -465,15 +601,11 @@ const CourseClass = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
                       padding: '10px 18px',
                       background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
-                      color: '#92400e',
-                      borderRadius: '50px',
-                      fontSize: '12px',
-                      fontWeight: '700',
+                      color: '#92400e', borderRadius: '50px',
+                      fontSize: '12px', fontWeight: '700',
                       textDecoration: 'none',
                       boxShadow: '0 4px 12px rgba(255, 200, 87, 0.25)',
                       marginBottom: '14px',
@@ -483,11 +615,8 @@ const CourseClass = () => {
                   </a>
                 )}
 
-                {/* Navigation */}
                 <div style={{
-                  display: 'flex',
-                  gap: '10px',
-                  marginTop: '16px',
+                  display: 'flex', gap: '10px', marginTop: '16px',
                   justifyContent: 'space-between',
                 }}>
                   <button
@@ -496,25 +625,17 @@ const CourseClass = () => {
                     style={{
                       padding: '11px 20px',
                       background: classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                        ? '#F3F4F6'
-                        : 'white',
+                        ? '#F3F4F6' : 'white',
                       color: classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                        ? '#9CA3AF'
-                        : '#6C63FF',
+                        ? '#9CA3AF' : '#6C63FF',
                       border: `2px solid ${
                         classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                          ? '#F3F4F6'
-                          : '#6C63FF'
+                          ? '#F3F4F6' : '#6C63FF'
                       }`,
-                      borderRadius: '50px',
-                      fontSize: '12px',
-                      fontWeight: '700',
+                      borderRadius: '50px', fontSize: '12px', fontWeight: '700',
                       cursor: classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                        ? 'not-allowed'
-                        : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
+                        ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
                     }}
                   >
                     ← Previous
@@ -530,30 +651,22 @@ const CourseClass = () => {
                       background:
                         classes.findIndex((c) => c.docId === activeClass.docId) ===
                         classes.length - 1
-                          ? '#F3F4F6'
-                          : 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+                          ? '#F3F4F6' : 'linear-gradient(135deg, #6C63FF, #5A52D5)',
                       color:
                         classes.findIndex((c) => c.docId === activeClass.docId) ===
                         classes.length - 1
-                          ? '#9CA3AF'
-                          : 'white',
-                      border: 'none',
-                      borderRadius: '50px',
-                      fontSize: '12px',
-                      fontWeight: '700',
+                          ? '#9CA3AF' : 'white',
+                      border: 'none', borderRadius: '50px',
+                      fontSize: '12px', fontWeight: '700',
                       cursor:
                         classes.findIndex((c) => c.docId === activeClass.docId) ===
                         classes.length - 1
-                          ? 'not-allowed'
-                          : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
+                          ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
                       boxShadow:
                         classes.findIndex((c) => c.docId === activeClass.docId) ===
                         classes.length - 1
-                          ? 'none'
-                          : '0 6px 20px rgba(108, 99, 255, 0.25)',
+                          ? 'none' : '0 6px 20px rgba(108, 99, 255, 0.25)',
                     }}
                   >
                     Next →
@@ -563,14 +676,15 @@ const CourseClass = () => {
             </div>
           ) : (
             <div style={{
-              background: 'white',
-              borderRadius: '16px',
-              padding: '80px 20px',
-              textAlign: 'center',
+              background: 'white', borderRadius: '16px',
+              padding: '80px 20px', textAlign: 'center',
               boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
             }}>
               <div style={{ fontSize: '60px', marginBottom: '16px' }}>📚</div>
-              <h3 style={{ fontSize: '18px', color: '#2D2D3F', marginBottom: '8px', fontWeight: '700' }}>
+              <h3 style={{
+                fontSize: '18px', color: '#2D2D3F',
+                marginBottom: '8px', fontWeight: '700',
+              }}>
                 কোন Class Select করুন
               </h3>
               <p style={{ color: '#6B7280', fontSize: '14px' }}>
@@ -579,40 +693,26 @@ const CourseClass = () => {
             </div>
           )}
 
-          {/* RIGHT: Chapters & Classes Sidebar */}
+          {/* RIGHT: Chapter Sidebar */}
           <div
             className="class-sidebar"
             style={{
-              background: 'white',
-              borderRadius: '16px',
+              background: 'white', borderRadius: '16px',
               boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
-              height: 'fit-content',
-              position: 'sticky',
-              top: '85px',
+              height: 'fit-content', position: 'sticky', top: '85px',
               maxHeight: 'calc(100vh - 110px)',
-              overflowY: 'auto',
-              overflowX: 'hidden',
+              overflowY: 'auto', overflowX: 'hidden',
             }}
           >
-            {/* Sidebar Header */}
             <div style={{
-              padding: '16px 18px',
-              borderBottom: '2px solid #F3F4F6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              padding: '16px 18px', borderBottom: '2px solid #F3F4F6',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               background: 'linear-gradient(135deg, #F8F9FE, #EEF2FF)',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
+              position: 'sticky', top: 0, zIndex: 10,
             }}>
               <h3 style={{
-                fontSize: '14px',
-                fontWeight: '800',
-                color: '#2D2D3F',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
+                fontSize: '14px', fontWeight: '800', color: '#2D2D3F',
+                display: 'flex', alignItems: 'center', gap: '6px',
               }}>
                 <BookOpen size={16} color="#6C63FF" />
                 Course Content
@@ -620,16 +720,13 @@ const CourseClass = () => {
               <span style={{
                 padding: '3px 10px',
                 background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-                color: 'white',
-                borderRadius: '50px',
-                fontSize: '10px',
-                fontWeight: '800',
+                color: 'white', borderRadius: '50px',
+                fontSize: '10px', fontWeight: '800',
               }}>
                 {chapters.length} CH
               </span>
             </div>
 
-            {/* Chapter List */}
             <div style={{ padding: '10px' }}>
               {chapters.map((ch, chIdx) => {
                 const chClasses = classes.filter((c) => c.chapterId === ch.docId);
@@ -644,87 +741,61 @@ const CourseClass = () => {
                   <div
                     key={ch.docId}
                     style={{
-                      marginBottom: '8px',
-                      borderRadius: '12px',
+                      marginBottom: '8px', borderRadius: '12px',
                       overflow: 'hidden',
                       background: isExpanded ? '#FAFBFF' : 'white',
                       border: `2px solid ${isExpanded ? '#6C63FF' : '#F3F4F6'}`,
                       transition: 'all 0.3s',
                     }}
                   >
-                    {/* Chapter Header */}
                     <button
                       onClick={() => toggleChapter(ch.docId)}
                       style={{
-                        width: '100%',
-                        padding: '14px',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        textAlign: 'left',
+                        width: '100%', padding: '14px', background: 'transparent',
+                        border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center',
+                        gap: '10px', textAlign: 'left',
                       }}
                     >
-                      {/* Chapter Number */}
                       <div style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '10px',
+                        width: '38px', height: '38px', borderRadius: '10px',
                         background: isExpanded
                           ? 'linear-gradient(135deg, #6C63FF, #5A52D5)'
                           : chapterProgress === 100
                             ? 'linear-gradient(135deg, #22c55e, #16a34a)'
                             : '#F3F4F6',
                         color: isExpanded || chapterProgress === 100 ? 'white' : '#6C63FF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: '800',
-                        flexShrink: 0,
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', fontSize: '14px',
+                        fontWeight: '800', flexShrink: 0,
                         boxShadow: isExpanded
-                          ? '0 6px 15px rgba(108, 99, 255, 0.30)'
-                          : 'none',
+                          ? '0 6px 15px rgba(108, 99, 255, 0.30)' : 'none',
                       }}>
                         {chapterProgress === 100 ? (
                           <CheckCircle2 size={18} />
-                        ) : (
-                          ch.order || chIdx + 1
-                        )}
+                        ) : (ch.order || chIdx + 1)}
                       </div>
 
-                      {/* Chapter Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{
-                          fontSize: '13px',
-                          fontWeight: '700',
+                          fontSize: '13px', fontWeight: '700',
                           color: isExpanded ? '#6C63FF' : '#2D2D3F',
-                          marginBottom: '4px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          marginBottom: '4px', overflow: 'hidden',
+                          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           {ch.title}
                         </p>
                         <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '10px',
-                          color: '#6B7280',
-                          fontWeight: '600',
+                          display: 'flex', alignItems: 'center',
+                          gap: '6px', fontSize: '10px',
+                          color: '#6B7280', fontWeight: '600',
                         }}>
                           <span>📹 {chClasses.length} Class</span>
                           {completedInChapter > 0 && (
                             <span style={{
-                              padding: '1px 6px',
-                              background: '#DCFCE7',
-                              color: '#166534',
-                              borderRadius: '50px',
-                              fontSize: '9px',
-                              fontWeight: '800',
+                              padding: '1px 6px', background: '#DCFCE7',
+                              color: '#166534', borderRadius: '50px',
+                              fontSize: '9px', fontWeight: '800',
                             }}>
                               {completedInChapter}/{chClasses.length} ✅
                             </span>
@@ -732,18 +803,11 @@ const CourseClass = () => {
                         </div>
                       </div>
 
-                      {/* Chevron */}
                       <div style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '50%',
+                        width: '26px', height: '26px', borderRadius: '50%',
                         background: isExpanded ? '#6C63FF' : '#F3F4F6',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        transition: 'all 0.3s',
-                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(0deg)',
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', flexShrink: 0,
                       }}>
                         {isExpanded ? (
                           <ChevronDown size={14} color="white" />
@@ -753,44 +817,31 @@ const CourseClass = () => {
                       </div>
                     </button>
 
-                    {/* Chapter Progress Bar */}
                     {isExpanded && chClasses.length > 0 && (
-                      <div style={{
-                        padding: '0 14px',
-                        marginBottom: '8px',
-                      }}>
+                      <div style={{ padding: '0 14px', marginBottom: '8px' }}>
                         <div style={{
-                          height: '4px',
-                          background: '#F3F4F6',
-                          borderRadius: '50px',
-                          overflow: 'hidden',
+                          height: '4px', background: '#F3F4F6',
+                          borderRadius: '50px', overflow: 'hidden',
                         }}>
                           <div style={{
-                            height: '100%',
-                            width: `${chapterProgress}%`,
+                            height: '100%', width: `${chapterProgress}%`,
                             background: 'linear-gradient(90deg, #22c55e, #16a34a)',
-                            borderRadius: '50px',
-                            transition: 'width 0.5s',
+                            borderRadius: '50px', transition: 'width 0.5s',
                           }} />
                         </div>
                       </div>
                     )}
 
-                    {/* Class List */}
                     {isExpanded && (
                       <div style={{
                         padding: '0 8px 8px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
+                        display: 'flex', flexDirection: 'column', gap: '4px',
                         animation: 'slideDown 0.3s ease',
                       }}>
                         {chClasses.length === 0 ? (
                           <div style={{
-                            padding: '16px',
-                            textAlign: 'center',
-                            color: '#9CA3AF',
-                            fontSize: '12px',
+                            padding: '16px', textAlign: 'center',
+                            color: '#9CA3AF', fontSize: '12px',
                           }}>
                             এই Chapter এ কোনো Class নেই
                           </div>
@@ -809,34 +860,24 @@ const CourseClass = () => {
                                     ? 'linear-gradient(135deg, #6C63FF, #5A52D5)'
                                     : 'white',
                                   border: `1px solid ${isActive ? '#6C63FF' : '#F3F4F6'}`,
-                                  borderRadius: '10px',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '10px',
-                                  textAlign: 'left',
+                                  borderRadius: '10px', cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center',
+                                  gap: '10px', textAlign: 'left',
                                   transition: 'all 0.2s',
                                   boxShadow: isActive
-                                    ? '0 8px 20px rgba(108, 99, 255, 0.25)'
-                                    : 'none',
+                                    ? '0 8px 20px rgba(108, 99, 255, 0.25)' : 'none',
                                 }}
                               >
-                                {/* Class Thumbnail */}
                                 <div style={{
-                                  width: '50px',
-                                  height: '34px',
-                                  borderRadius: '6px',
-                                  overflow: 'hidden',
-                                  flexShrink: 0,
-                                  background: '#000',
-                                  position: 'relative',
+                                  width: '50px', height: '34px', borderRadius: '6px',
+                                  overflow: 'hidden', flexShrink: 0,
+                                  background: '#000', position: 'relative',
                                 }}>
                                   <img
                                     src={`https://img.youtube.com/vi/${cls.youtubeId}/mqdefault.jpg`}
                                     alt=""
                                     style={{
-                                      width: '100%',
-                                      height: '100%',
+                                      width: '100%', height: '100%',
                                       objectFit: 'cover',
                                       opacity: isActive ? 1 : 0.7,
                                     }}
@@ -846,10 +887,8 @@ const CourseClass = () => {
                                   />
                                   {isActive && (
                                     <div style={{
-                                      position: 'absolute',
-                                      inset: 0,
-                                      display: 'flex',
-                                      alignItems: 'center',
+                                      position: 'absolute', inset: 0,
+                                      display: 'flex', alignItems: 'center',
                                       justifyContent: 'center',
                                       background: 'rgba(108, 99, 255, 0.5)',
                                     }}>
@@ -858,17 +897,13 @@ const CourseClass = () => {
                                   )}
                                 </div>
 
-                                {/* Class Info */}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    marginBottom: '3px',
+                                    display: 'flex', alignItems: 'center',
+                                    gap: '5px', marginBottom: '3px',
                                   }}>
                                     <span style={{
-                                      fontSize: '9px',
-                                      fontWeight: '800',
+                                      fontSize: '9px', fontWeight: '800',
                                       color: isActive ? 'rgba(255,255,255,0.8)' : '#9CA3AF',
                                     }}>
                                       {String(idx + 1).padStart(2, '0')}
@@ -881,13 +916,10 @@ const CourseClass = () => {
                                     )}
                                   </div>
                                   <p style={{
-                                    fontSize: '12px',
-                                    fontWeight: '600',
+                                    fontSize: '12px', fontWeight: '600',
                                     color: isActive ? 'white' : '#2D2D3F',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    marginBottom: '2px',
+                                    overflow: 'hidden', textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap', marginBottom: '2px',
                                   }}>
                                     {cls.title}
                                   </p>
