@@ -87,7 +87,7 @@ const AdminCourses = () => {
         instructor: form.instructor,
         cycle: form.cycle || null,
         type: form.type,
-        telegramLink: form.type === 'free' ? form.telegramLink : null,
+        telegramLink: form.telegramLink || null,
         shortDesc: form.shortDesc,
         fullDesc: form.fullDesc,
         image: form.image,
@@ -512,17 +512,27 @@ const AdminCourses = () => {
                   />
                 </Field>
 
-                {form.type === 'free' && (
-                  <Field label="Telegram Link *">
-                    <input
-                      type="text"
-                      value={form.telegramLink}
-                      onChange={(e) => updateField('telegramLink', e.target.value)}
-                      placeholder="https://t.me/your_channel"
-                      style={inputStyle}
-                    />
-                  </Field>
-                )}
+                {/* ⚠️ Telegram Link - সব Course এ দেখাবে */}
+                <Field label={`Telegram Link ${form.type === 'free' ? '*' : '(Optional)'}`}>
+                  <input
+                    type="text"
+                    value={form.telegramLink || ''}
+                    onChange={(e) => updateField('telegramLink', e.target.value)}
+                    placeholder="https://t.me/your_channel"
+                    style={inputStyle}
+                  />
+                  <p style={{
+                    fontSize: '11px',
+                    color: form.type === 'free' ? '#ef4444' : '#6B7280',
+                    marginTop: '4px',
+                    lineHeight: '1.5',
+                    fontWeight: form.type === 'free' ? '600' : '400',
+                  }}>
+                    {form.type === 'free'
+                      ? '⚠️ Free Course এ অবশ্যই দিতে হবে — User সরাসরি Join করবে'
+                      : '💡 Optional — Order Approve এর সময় Auto-Fill হবে'}
+                  </p>
+                </Field>
 
                 <Field label="Image URL *">
                   <input
