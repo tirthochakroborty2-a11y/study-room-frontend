@@ -12,9 +12,10 @@ html {
 body {
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
-  color: #2D2D3F;
-  background: #F8F9FE;
+  color: var(--text-primary);
+  background: var(--bg-primary);
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 a {
@@ -39,9 +40,142 @@ input, textarea, select {
   outline: none;
 }
 
+/* ==================== LIGHT THEME (Default) ==================== */
+:root,
+[data-theme="light"] {
+  --bg-primary: #F8F9FE;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F3F4F6;
+  --bg-hover: #EEF2FF;
+  --bg-gradient: linear-gradient(135deg, #F8F9FE 0%, #EEF2FF 100%);
+  
+  --text-primary: #2D2D3F;
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  --text-inverse: #FFFFFF;
+  
+  --border-color: #E5E7EB;
+  --border-light: #F3F4F6;
+  
+  --card-bg: #FFFFFF;
+  --card-shadow: 0 10px 40px rgba(108, 99, 255, 0.08);
+  --card-shadow-hover: 0 20px 50px rgba(108, 99, 255, 0.15);
+  
+  --primary: #6C63FF;
+  --primary-dark: #5A52D5;
+  --primary-light: #EEF2FF;
+  --success: #22c55e;
+  --warning: #FFC857;
+  --danger: #ef4444;
+  
+  --scrollbar-track: #F3F4F6;
+  --scrollbar-thumb: #D1D5DB;
+}
+
+/* ==================== DARK THEME ==================== */
+[data-theme="dark"] {
+  --bg-primary: #0F0F1E;
+  --bg-secondary: #1A1A2E;
+  --bg-tertiary: #252540;
+  --bg-hover: #2D2D4A;
+  --bg-gradient: linear-gradient(135deg, #0F0F1E 0%, #1A1A2E 100%);
+  
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --text-tertiary: #6B7280;
+  --text-inverse: #1A1A2E;
+  
+  --border-color: #2D2D4A;
+  --border-light: #252540;
+  
+  --card-bg: #1A1A2E;
+  --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  --card-shadow-hover: 0 20px 50px rgba(108, 99, 255, 0.3);
+  
+  --primary: #8B83FF;
+  --primary-dark: #6C63FF;
+  --primary-light: #2D2D4A;
+  --success: #34d399;
+  --warning: #FBBF24;
+  --danger: #f87171;
+  
+  --scrollbar-track: #1A1A2E;
+  --scrollbar-thumb: #4B5563;
+}
+
 /* ==================== UTILITIES ==================== */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+/* ==================== SCROLLBAR ==================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ==================== GLOBAL DARK MODE OVERRIDES ==================== */
+
+/* Auto-detect white backgrounds and convert */
+[data-theme="dark"] div[style*="background: white"],
+[data-theme="dark"] div[style*="background: rgb(255, 255, 255)"] {
+  background: var(--card-bg) !important;
+}
+
+/* Input fields */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* Headings */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Paragraphs and spans */
+[data-theme="dark"] p,
+[data-theme="dark"] span:not([class]),
+[data-theme="dark"] label {
+  color: var(--text-primary);
+}
+
+/* ==================== SMOOTH TRANSITIONS ==================== */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.3s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Exclude transitions for transforms and animations */
+*:hover {
+  transition-property: background-color, border-color, color, transform, box-shadow;
 }

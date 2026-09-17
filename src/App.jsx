@@ -9,8 +9,10 @@ import CourseDetails from './pages/CourseDetails';
 import Payment from './pages/Payment';
 import MyCourses from './pages/MyCourses';
 import OrderDetails from './pages/OrderDetails';
+import OrderHistory from './pages/OrderHistory';
 import CourseClass from './pages/CourseClass';
 import Discussion from './pages/Discussion';
+import Support from './pages/Support';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
 
@@ -20,6 +22,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminUserDetails from './pages/admin/AdminUserDetails';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminClasses from './pages/admin/AdminClasses';
+import AdminSupport from './pages/admin/AdminSupport';
 import BulkCourseImport from './pages/admin/BulkCourseImport';
 
 function App() {
@@ -39,104 +42,23 @@ function App() {
           <Route path="/about" element={<About />} />
 
           {/* ==================== PROTECTED ROUTES ==================== */}
-          <Route
-            path="/payment"
-            element={
-              <ProtectedRoute>
-                <Payment />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/my-courses"
-            element={
-              <ProtectedRoute>
-                <MyCourses />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/order/:docId"
-            element={
-              <ProtectedRoute>
-                <OrderDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/class/:courseId"
-            element={
-              <ProtectedRoute>
-                <CourseClass />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/discussion"
-            element={
-              <ProtectedRoute>
-                <Discussion />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+          <Route path="/my-courses" element={<ProtectedRoute><MyCourses /></ProtectedRoute>} />
+          <Route path="/order/:docId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+          <Route path="/order-history" element={<ProtectedRoute><OrderHistory /></ProtectedRoute>} />
+          <Route path="/class/:courseId" element={<ProtectedRoute><CourseClass /></ProtectedRoute>} />
+          <Route path="/discussion" element={<ProtectedRoute><Discussion /></ProtectedRoute>} />
+          <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
 
           {/* ==================== ADMIN ROUTES ==================== */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/orders"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminOrders />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminUsers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users/:id"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminUserDetails />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/courses"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminCourses />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/classes"
-            element={
-              <ProtectedRoute adminOnly>
-                <AdminClasses />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/bulk-import"
-            element={
-              <ProtectedRoute adminOnly>
-                <BulkCourseImport />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/orders" element={<ProtectedRoute adminOnly><AdminOrders /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute adminOnly><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/users/:id" element={<ProtectedRoute adminOnly><AdminUserDetails /></ProtectedRoute>} />
+          <Route path="/admin/courses" element={<ProtectedRoute adminOnly><AdminCourses /></ProtectedRoute>} />
+          <Route path="/admin/classes" element={<ProtectedRoute adminOnly><AdminClasses /></ProtectedRoute>} />
+          <Route path="/admin/support" element={<ProtectedRoute adminOnly><AdminSupport /></ProtectedRoute>} />
+          <Route path="/admin/bulk-import" element={<ProtectedRoute adminOnly><BulkCourseImport /></ProtectedRoute>} />
 
           {/* ==================== 404 ==================== */}
           <Route path="*" element={<NotFound />} />
