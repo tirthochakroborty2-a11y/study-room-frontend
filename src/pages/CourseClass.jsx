@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  ArrowLeft, PlayCircle, CheckCircle2, FileText,
-  Youtube, ChevronLeft, ChevronRight, Lock, List,
+  ArrowLeft,
+  PlayCircle,
+  CheckCircle2,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Video,
 } from 'lucide-react';
 import { useCourses } from '../context/CourseContext';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +40,7 @@ const CourseClass = () => {
     load();
   }, [courseId]);
 
-  // Save progress locally
+  // Load progress from localStorage
   useEffect(() => {
     if (!user || !courseId) return;
     const key = `progress_${user.uid}_${courseId}`;
@@ -85,6 +91,7 @@ const CourseClass = () => {
     }
   };
 
+  // Loading State
   if (coursesLoading || loading) {
     return (
       <section style={{
@@ -110,6 +117,7 @@ const CourseClass = () => {
     );
   }
 
+  // Course Not Found
   if (!course) {
     return (
       <section style={{
@@ -132,6 +140,7 @@ const CourseClass = () => {
     );
   }
 
+  // No Classes
   if (classes.length === 0) {
     return (
       <section style={{
@@ -397,7 +406,6 @@ const CourseClass = () => {
                   )}
                 </div>
 
-                {/* Mark Complete Button */}
                 <button
                   onClick={markComplete}
                   disabled={completedClasses.includes(activeClass.docId)}
@@ -449,7 +457,6 @@ const CourseClass = () => {
                 </div>
               )}
 
-              {/* Resources */}
               {activeClass.notesUrl && (
                 <a
                   href={activeClass.notesUrl}
@@ -587,7 +594,6 @@ const CourseClass = () => {
                       width: '100%',
                     }}
                   >
-                    {/* Thumbnail */}
                     <div style={{
                       width: '60px',
                       height: '40px',
@@ -624,7 +630,6 @@ const CourseClass = () => {
                       )}
                     </div>
 
-                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         display: 'flex',

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Plus, Edit, Trash2, X, Save, Youtube, Eye, ExternalLink, Search,
+  Plus, Edit, Trash2, X, Save, PlayCircle, Eye, ExternalLink, Search,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminSidebar from '../../components/admin/AdminSidebar';
@@ -29,9 +29,7 @@ const AdminClasses = () => {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [previewId, setPreviewId] = useState(null);
 
-  // Load classes when course changes
   useEffect(() => {
     if (selectedCourse) {
       loadClasses();
@@ -321,16 +319,7 @@ const AdminClasses = () => {
                       border: '2px solid #F3F4F6',
                       transition: 'all 0.3s',
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#6C63FF';
-                      e.currentTarget.style.boxShadow = '0 10px 30px rgba(108, 99, 255, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#F3F4F6';
-                      e.currentTarget.style.boxShadow = '0 6px 20px rgba(108, 99, 255, 0.06)';
-                    }}
                   >
-                    {/* Order Badge */}
                     <div style={{
                       width: '50px',
                       height: '50px',
@@ -348,7 +337,6 @@ const AdminClasses = () => {
                       {cls.order || idx + 1}
                     </div>
 
-                    {/* Thumbnail */}
                     <div style={{
                       width: '120px',
                       height: '70px',
@@ -378,11 +366,10 @@ const AdminClasses = () => {
                         justifyContent: 'center',
                         background: 'rgba(0,0,0,0.3)',
                       }}>
-                        <Youtube size={24} color="white" />
+                        <PlayCircle size={24} color="white" />
                       </div>
                     </div>
 
-                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h3 style={{
                         fontSize: '15px',
@@ -415,7 +402,6 @@ const AdminClasses = () => {
                       </p>
                     </div>
 
-                    {/* Actions */}
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                       <a
                         href={`https://www.youtube.com/watch?v=${cls.youtubeId}`}
@@ -573,7 +559,6 @@ const AdminClasses = () => {
                     💡 youtube.com/watch, youtu.be, embed সব Format কাজ করবে
                   </p>
 
-                  {/* YouTube Preview */}
                   {ytPreviewId && (
                     <div style={{
                       marginTop: '12px',
@@ -607,7 +592,7 @@ const AdminClasses = () => {
                         alignItems: 'center',
                         gap: '4px',
                       }}>
-                        <Youtube size={12} /> Video ID: {ytPreviewId}
+                        <PlayCircle size={12} /> Video ID: {ytPreviewId}
                       </div>
                     </div>
                   )}
