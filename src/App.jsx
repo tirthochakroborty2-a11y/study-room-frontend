@@ -10,6 +10,7 @@ import Payment from './pages/Payment';
 import MyCourses from './pages/MyCourses';
 import OrderDetails from './pages/OrderDetails';
 import CourseClass from './pages/CourseClass';
+import Discussion from './pages/Discussion';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
 
@@ -19,6 +20,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminUserDetails from './pages/admin/AdminUserDetails';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminClasses from './pages/admin/AdminClasses';
+import BulkCourseImport from './pages/admin/BulkCourseImport';
 
 function App() {
   return (
@@ -69,6 +71,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/discussion"
+            element={
+              <ProtectedRoute>
+                <Discussion />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ==================== ADMIN ROUTES ==================== */}
           <Route
@@ -116,6 +126,14 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <AdminClasses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/bulk-import"
+            element={
+              <ProtectedRoute adminOnly>
+                <BulkCourseImport />
               </ProtectedRoute>
             }
           />

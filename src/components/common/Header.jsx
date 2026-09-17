@@ -1,7 +1,16 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, X, LogIn, User, LogOut, Crown } from 'lucide-react';
+import {
+  Menu,
+  X,
+  LogIn,
+  User,
+  LogOut,
+  Crown,
+  MessageCircle,
+  BookOpen,
+} from 'lucide-react';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,7 +30,6 @@ const Header = () => {
     setDropdownOpen(false);
   }, [location]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClick = () => setDropdownOpen(false);
     if (dropdownOpen) {
@@ -34,6 +42,11 @@ const Header = () => {
     { to: '/', label: 'হোম' },
     { to: '/courses', label: 'কোর্স' },
     { to: '/about', label: 'অ্যাবাউট' },
+  ];
+
+  const userNavLinks = [
+    { to: '/my-courses', label: 'আমার কোর্স' },
+    { to: '/discussion', label: '💬 Discussion' },
   ];
 
   return (
@@ -59,13 +72,14 @@ const Header = () => {
         }}>
           {/* Logo */}
           <Link to="/" style={{
-            fontSize: '24px',
+            fontSize: '22px',
             fontWeight: '800',
             color: '#6C63FF',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             textDecoration: 'none',
+            flexShrink: 0,
           }}>
             📚 স্টাডি রুম
           </Link>
@@ -74,21 +88,24 @@ const Header = () => {
           <nav style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '32px',
+            gap: '24px',
           }} className="desktop-nav">
             {navLinks.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 style={({ isActive }) => ({
-                  fontSize: '15px',
+                  fontSize: '14px',
                   fontWeight: '500',
                   color: isActive ? '#6C63FF' : '#2D2D3F',
                   position: 'relative',
                   paddingBottom: '4px',
-                  borderBottom: isActive ? '2.5px solid #6C63FF' : '2.5px solid transparent',
+                  borderBottom: isActive
+                    ? '2.5px solid #6C63FF'
+                    : '2.5px solid transparent',
                   transition: 'all 0.3s',
                   textDecoration: 'none',
+                  whiteSpace: 'nowrap',
                 })}
               >
                 {link.label}
@@ -96,30 +113,47 @@ const Header = () => {
             ))}
 
             {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <NavLink to="/my-courses" style={({ isActive }) => ({
-                  fontSize: '15px',
-                  fontWeight: '500',
-                  color: isActive ? '#6C63FF' : '#2D2D3F',
-                  paddingBottom: '4px',
-                  borderBottom: isActive ? '2.5px solid #6C63FF' : '2.5px solid transparent',
-                  textDecoration: 'none',
-                })}>
-                  আমার কোর্স
-                </NavLink>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                {/* User Nav Links */}
+                {userNavLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    style={({ isActive }) => ({
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: isActive ? '#6C63FF' : '#2D2D3F',
+                      textDecoration: 'none',
+                      paddingBottom: '4px',
+                      borderBottom: isActive
+                        ? '2.5px solid #6C63FF'
+                        : '2.5px solid transparent',
+                      transition: 'all 0.3s',
+                      whiteSpace: 'nowrap',
+                    })}
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
 
                 {userData?.role === 'admin' && (
-                  <NavLink to="/admin" style={({ isActive }) => ({
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    color: '#FF6584',
-                    paddingBottom: '4px',
-                    borderBottom: isActive ? '2.5px solid #FF6584' : '2.5px solid transparent',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  })}>
+                  <NavLink
+                    to="/admin"
+                    style={({ isActive }) => ({
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#FF6584',
+                      textDecoration: 'none',
+                      paddingBottom: '4px',
+                      borderBottom: isActive
+                        ? '2.5px solid #FF6584'
+                        : '2.5px solid transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      whiteSpace: 'nowrap',
+                    })}
+                  >
                     <Crown size={14} /> Admin
                   </NavLink>
                 )}
@@ -141,10 +175,13 @@ const Header = () => {
                       cursor: 'pointer',
                       transition: 'all 0.3s',
                       boxShadow: '0 4px 12px rgba(108, 99, 255, 0.25)',
+                      objectFit: 'cover',
+                    }}
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/38';
                     }}
                   />
 
-                  {/* Dropdown */}
                   {dropdownOpen && (
                     <div
                       onClick={(e) => e.stopPropagation()}
@@ -156,7 +193,7 @@ const Header = () => {
                         borderRadius: '14px',
                         boxShadow: '0 10px 40px rgba(108, 99, 255, 0.20)',
                         padding: '8px',
-                        minWidth: '220px',
+                        minWidth: '240px',
                         zIndex: 1002,
                         animation: 'fadeIn 0.2s ease',
                       }}
@@ -179,6 +216,7 @@ const Header = () => {
                           color: '#6B7280',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}>
                           {user.email}
                         </div>
@@ -198,7 +236,24 @@ const Header = () => {
                           textDecoration: 'none',
                         }}
                       >
-                        <User size={16} color="#6C63FF" /> আমার কোর্স
+                        <BookOpen size={16} color="#6C63FF" /> আমার কোর্স
+                      </Link>
+
+                      <Link
+                        to="/discussion"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          color: '#2D2D3F',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <MessageCircle size={16} color="#6C63FF" /> Discussion
                       </Link>
 
                       {userData?.role === 'admin' && (
@@ -235,6 +290,7 @@ const Header = () => {
                           width: '100%',
                           textAlign: 'left',
                           cursor: 'pointer',
+                          border: 'none',
                         }}
                       >
                         <LogOut size={16} /> লগআউট
@@ -244,39 +300,31 @@ const Header = () => {
                 </div>
               </div>
             ) : (
-              // Login Button (Login না থাকলে)
               <button
                 onClick={loginWithGoogle}
                 style={{
-                  padding: '10px 24px',
+                  padding: '10px 22px',
                   background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
                   color: 'white',
                   borderRadius: '50px',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   fontWeight: '600',
                   boxShadow: '0 8px 20px rgba(108, 99, 255, 0.25)',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: 'all 0.3s',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer',
                   border: 'none',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(108, 99, 255, 0.35)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(108, 99, 255, 0.25)';
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <LogIn size={16} /> Login
+                <LogIn size={15} /> Login
               </button>
             )}
           </nav>
 
-          {/* Hamburger (Mobile) */}
+          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="hamburger"
@@ -288,7 +336,11 @@ const Header = () => {
               border: 'none',
             }}
           >
-            {menuOpen ? <X size={28} color="#6C63FF" /> : <Menu size={28} color="#6C63FF" />}
+            {menuOpen ? (
+              <X size={26} color="#6C63FF" />
+            ) : (
+              <Menu size={26} color="#6C63FF" />
+            )}
           </button>
         </div>
       </header>
@@ -302,7 +354,7 @@ const Header = () => {
         height: '100vh',
         background: 'white',
         boxShadow: '-4px 0 30px rgba(0,0,0,0.1)',
-        padding: '80px 30px 30px',
+        padding: '80px 24px 24px',
         zIndex: 1001,
         transition: 'right 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         overflowY: 'auto',
@@ -325,14 +377,23 @@ const Header = () => {
                 height: '48px',
                 borderRadius: '50%',
                 border: '2px solid #6C63FF',
+                objectFit: 'cover',
+              }}
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/48';
               }}
             />
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontWeight: '700', fontSize: '15px', color: '#2D2D3F' }}>
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <div style={{
+                fontWeight: '700',
+                fontSize: '14px',
+                color: '#2D2D3F',
+                marginBottom: '2px',
+              }}>
                 {user.displayName}
               </div>
               <div style={{
-                fontSize: '12px',
+                fontSize: '11px',
                 color: '#6B7280',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -345,6 +406,7 @@ const Header = () => {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* Public Links */}
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -354,8 +416,8 @@ const Header = () => {
                 padding: '14px 0',
                 borderBottom: '1px solid #E5E7EB',
                 color: isActive ? '#6C63FF' : '#2D2D3F',
-                fontWeight: '500',
-                fontSize: '16px',
+                fontWeight: '600',
+                fontSize: '15px',
                 textDecoration: 'none',
                 transition: 'all 0.3s',
               })}
@@ -366,28 +428,49 @@ const Header = () => {
 
           {user ? (
             <>
-              <NavLink to="/my-courses" style={{
-                display: 'block',
-                padding: '14px 0',
-                borderBottom: '1px solid #E5E7EB',
-                color: '#2D2D3F',
-                fontWeight: '500',
-                fontSize: '16px',
-                textDecoration: 'none',
-              }}>
-                📚 আমার কোর্স
-              </NavLink>
-
-              {userData?.role === 'admin' && (
-                <NavLink to="/admin" style={{
+              <NavLink
+                to="/my-courses"
+                style={({ isActive }) => ({
                   display: 'block',
                   padding: '14px 0',
                   borderBottom: '1px solid #E5E7EB',
-                  color: '#FF6584',
+                  color: isActive ? '#6C63FF' : '#2D2D3F',
                   fontWeight: '600',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   textDecoration: 'none',
-                }}>
+                })}
+              >
+                📚 আমার কোর্স
+              </NavLink>
+
+              <NavLink
+                to="/discussion"
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '14px 0',
+                  borderBottom: '1px solid #E5E7EB',
+                  color: isActive ? '#6C63FF' : '#2D2D3F',
+                  fontWeight: '600',
+                  fontSize: '15px',
+                  textDecoration: 'none',
+                })}
+              >
+                💬 Discussion
+              </NavLink>
+
+              {userData?.role === 'admin' && (
+                <NavLink
+                  to="/admin"
+                  style={({ isActive }) => ({
+                    display: 'block',
+                    padding: '14px 0',
+                    borderBottom: '1px solid #E5E7EB',
+                    color: '#FF6584',
+                    fontWeight: '700',
+                    fontSize: '15px',
+                    textDecoration: 'none',
+                  })}
+                >
                   👑 Admin Panel
                 </NavLink>
               )}
@@ -400,8 +483,8 @@ const Header = () => {
                   background: '#FEE2E2',
                   color: '#ef4444',
                   borderRadius: '12px',
-                  fontSize: '16px',
-                  fontWeight: '600',
+                  fontSize: '15px',
+                  fontWeight: '700',
                   cursor: 'pointer',
                   border: 'none',
                   display: 'flex',
@@ -410,7 +493,7 @@ const Header = () => {
                   gap: '8px',
                 }}
               >
-                <LogOut size={18} /> লগআউট
+                <LogOut size={17} /> লগআউট
               </button>
             </>
           ) : (
@@ -422,8 +505,8 @@ const Header = () => {
                 background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
                 color: 'white',
                 borderRadius: '12px',
-                fontSize: '16px',
-                fontWeight: '600',
+                fontSize: '15px',
+                fontWeight: '700',
                 cursor: 'pointer',
                 border: 'none',
                 display: 'flex',
@@ -433,7 +516,7 @@ const Header = () => {
                 boxShadow: '0 8px 20px rgba(108, 99, 255, 0.25)',
               }}
             >
-              <LogIn size={18} /> Login with Google
+              <LogIn size={17} /> Login with Google
             </button>
           )}
         </div>
@@ -458,6 +541,11 @@ const Header = () => {
       />
 
       <style>{`
+        @media (max-width: 992px) {
+          .desktop-nav {
+            gap: 16px !important;
+          }
+        }
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .hamburger { display: block !important; }
