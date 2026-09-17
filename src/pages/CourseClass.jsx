@@ -9,6 +9,9 @@ import {
   ChevronRight,
   List,
   BookOpen,
+  Clock,
+  Layers,
+  Award,
 } from 'lucide-react';
 import { useCourses } from '../context/CourseContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +28,6 @@ const CourseClass = () => {
   const [activeClass, setActiveClass] = useState(null);
   const [expandedChapters, setExpandedChapters] = useState([]);
   const [completedClasses, setCompletedClasses] = useState([]);
-  const [showSidebar, setShowSidebar] = useState(false);
 
   const course = getCourseById(courseId);
 
@@ -39,14 +41,12 @@ const CourseClass = () => {
       ]);
       if (chRes.success) {
         setChapters(chRes.chapters);
-        // Auto expand first chapter
         if (chRes.chapters.length > 0) {
           setExpandedChapters([chRes.chapters[0].docId]);
         }
       }
       if (clRes.success) {
         setClasses(clRes.classes);
-        // Auto select first class
         if (clRes.classes.length > 0) {
           setActiveClass(clRes.classes[0]);
         }
@@ -56,7 +56,6 @@ const CourseClass = () => {
     load();
   }, [courseId]);
 
-  // Load progress
   useEffect(() => {
     if (!user || !courseId) return;
     const key = `progress_${user.uid}_${courseId}`;
@@ -68,17 +67,12 @@ const CourseClass = () => {
     }
   }, [user, courseId]);
 
-  const saveProgress = (newCompleted) => {
-    if (!user || !courseId) return;
-    const key = `progress_${user.uid}_${courseId}`;
-    localStorage.setItem(key, JSON.stringify(newCompleted));
-    setCompletedClasses(newCompleted);
-  };
-
   const markComplete = (classId) => {
     if (completedClasses.includes(classId)) return;
     const newCompleted = [...completedClasses, classId];
-    saveProgress(newCompleted);
+    const key = `progress_${user.uid}_${courseId}`;
+    localStorage.setItem(key, JSON.stringify(newCompleted));
+    setCompletedClasses(newCompleted);
   };
 
   const toggleChapter = (chapterId) => {
@@ -91,7 +85,6 @@ const CourseClass = () => {
 
   const selectClass = (cls) => {
     setActiveClass(cls);
-    setShowSidebar(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -112,8 +105,6 @@ const CourseClass = () => {
     }
   };
 
-  // ==================== STATES ====================
-
   if (coursesLoading || loading) {
     return (
       <section style={{
@@ -121,13 +112,9 @@ const CourseClass = () => {
         textAlign: 'center',
         minHeight: '100vh',
       }}>
-        <div style={{
-          fontSize: '48px',
-          marginBottom: '16px',
-          animation: 'pulse 1.5s infinite',
-        }}>🎓</div>
+        <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'pulse 1.5s infinite' }}>🎓</div>
         <p style={{ color: '#6C63FF', fontSize: '15px', fontWeight: '600' }}>
-          Class লোড হচ্ছে...
+          লোড হচ্ছে...
         </p>
         <style>{`
           @keyframes pulse {
@@ -141,20 +128,10 @@ const CourseClass = () => {
 
   if (!course) {
     return (
-      <section style={{
-        padding: '120px 20px 60px',
-        textAlign: 'center',
-        minHeight: '100vh',
-      }}>
+      <section style={{ padding: '120px 20px 60px', textAlign: 'center', minHeight: '100vh' }}>
         <div style={{ fontSize: '80px', marginBottom: '20px' }}>😕</div>
-        <h2 style={{ fontSize: '22px', color: '#2D2D3F', marginBottom: '20px' }}>
-          Course পাওয়া যায়নি
-        </h2>
-        <Link to="/my-courses" style={{
-          color: '#6C63FF',
-          textDecoration: 'none',
-          fontWeight: '600',
-        }}>
+        <h2 style={{ fontSize: '22px', color: '#2D2D3F', marginBottom: '20px' }}>Course পাওয়া যায়নি</h2>
+        <Link to="/my-courses" style={{ color: '#6C63FF', textDecoration: 'none', fontWeight: '600' }}>
           ← আমার কোর্সে ফিরুন
         </Link>
       </section>
@@ -163,32 +140,17 @@ const CourseClass = () => {
 
   if (chapters.length === 0 || classes.length === 0) {
     return (
-      <section style={{
-        padding: '120px 20px 60px',
-        textAlign: 'center',
-        minHeight: '100vh',
-      }}>
+      <section style={{ padding: '120px 20px 60px', textAlign: 'center', minHeight: '100vh' }}>
         <div style={{ fontSize: '80px', marginBottom: '20px' }}>📹</div>
-        <h2 style={{
-          fontSize: '22px',
-          color: '#2D2D3F',
-          marginBottom: '12px',
-          fontWeight: '700',
-        }}>
+        <h2 style={{ fontSize: '22px', color: '#2D2D3F', marginBottom: '12px', fontWeight: '700' }}>
           এখনো কোনো Class যোগ করা হয়নি
         </h2>
         <Link to="/my-courses" style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
           padding: '12px 28px',
           background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-          color: 'white',
-          borderRadius: '50px',
-          textDecoration: 'none',
-          fontWeight: '600',
-          fontSize: '14px',
-          marginTop: '20px',
+          color: 'white', borderRadius: '50px',
+          textDecoration: 'none', fontWeight: '600', fontSize: '14px', marginTop: '20px',
         }}>
           ← আমার কোর্সে ফিরুন
         </Link>
@@ -197,13 +159,12 @@ const CourseClass = () => {
   }
 
   const progressPercent = classes.length > 0
-    ? Math.round((completedClasses.length / classes.length) * 100)
-    : 0;
+    ? Math.round((completedClasses.length / classes.length) * 100) : 0;
 
   return (
     <section style={{
       padding: '85px 0 40px',
-      background: '#F8F9FE',
+      background: 'linear-gradient(180deg, #F8F9FE 0%, #EEF2FF 100%)',
       minHeight: '100vh',
     }}>
       <div className="container">
@@ -231,526 +192,709 @@ const CourseClass = () => {
           }}>
             <ArrowLeft size={14} /> আমার কোর্স
           </Link>
-
-          <button
-            onClick={() => setShowSidebar(!showSidebar)}
-            className="sidebar-toggle"
-            style={{
-              display: 'none',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '9px 14px',
-              background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '50px',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(108, 99, 255, 0.25)',
-            }}
-          >
-            <List size={13} /> ক্লাস লিস্ট
-          </button>
         </div>
 
-        {/* Progress */}
+        {/* Course Hero Card */}
         <div style={{
-          background: 'white',
-          borderRadius: '14px',
-          padding: '14px 16px',
-          marginBottom: '16px',
-          boxShadow: '0 6px 20px rgba(108, 99, 255, 0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px',
-          flexWrap: 'wrap',
+          background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+          borderRadius: '20px',
+          padding: '24px',
+          marginBottom: '20px',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 20px 50px rgba(108, 99, 255, 0.25)',
         }}>
           <div style={{
+            position: 'absolute',
+            top: '-60px',
+            right: '-60px',
+            width: '200px',
+            height: '200px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.20), transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '-80px',
+            left: '-80px',
+            width: '240px',
+            height: '240px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(255,101,132,0.25), transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+
+          <div style={{
             display: 'flex',
+            gap: '16px',
             alignItems: 'center',
-            gap: '10px',
-            flex: 1,
-            minWidth: '200px',
+            position: 'relative',
+            zIndex: 1,
+            flexWrap: 'wrap',
           }}>
             <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6C63FF',
+              width: '70px',
+              height: '70px',
+              borderRadius: '16px',
+              overflow: 'hidden',
               flexShrink: 0,
+              border: '3px solid rgba(255,255,255,0.3)',
+              background: 'white',
             }}>
-              <PlayCircle size={20} />
+              <img
+                src={course.image}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/70'; }}
+              />
             </div>
-            <div style={{ minWidth: 0 }}>
+
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '3px 10px',
+                background: 'rgba(255,255,255,0.20)',
+                borderRadius: '50px',
+                fontSize: '11px',
+                fontWeight: '700',
+                color: 'white',
+                marginBottom: '8px',
+                backdropFilter: 'blur(10px)',
+              }}>
+                <Award size={11} /> Premium Course
+              </div>
               <h1 style={{
-                fontSize: '14px',
+                fontSize: 'clamp(17px, 3vw, 22px)',
                 fontWeight: '800',
-                color: '#2D2D3F',
-                marginBottom: '2px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                color: 'white',
+                marginBottom: '8px',
+                lineHeight: '1.3',
               }}>
                 {course.name}
               </h1>
-              <p style={{ fontSize: '11px', color: '#6B7280' }}>
-                📖 {chapters.length} Chapter • 📹 {classes.length} Class
-              </p>
+              <div style={{
+                display: 'flex',
+                gap: '14px',
+                flexWrap: 'wrap',
+                fontSize: '12px',
+                color: 'rgba(255,255,255,0.85)',
+                fontWeight: '600',
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Layers size={12} /> {chapters.length} Chapter
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <PlayCircle size={12} /> {classes.length} Class
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={12} /> {course.duration}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div style={{ flex: 1, minWidth: '180px' }}>
+          {/* Progress Bar */}
+          <div style={{ marginTop: '20px', position: 'relative', zIndex: 1 }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              fontSize: '11px',
+              fontSize: '12px',
+              color: 'rgba(255,255,255,0.9)',
               fontWeight: '700',
-              color: '#6B7280',
-              marginBottom: '5px',
+              marginBottom: '8px',
             }}>
-              <span>📊 Progress</span>
-              <span style={{ color: '#22c55e' }}>
-                {completedClasses.length} / {classes.length} ({progressPercent}%)
-              </span>
+              <span>📊 আপনার Progress</span>
+              <span>{completedClasses.length} / {classes.length} ({progressPercent}%)</span>
             </div>
             <div style={{
-              height: '7px',
-              background: '#F3F4F6',
+              height: '10px',
+              background: 'rgba(255,255,255,0.20)',
               borderRadius: '50px',
               overflow: 'hidden',
             }}>
               <div style={{
                 height: '100%',
                 width: `${progressPercent}%`,
-                background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                background: 'linear-gradient(90deg, #FFC857, #FF6584)',
                 borderRadius: '50px',
                 transition: 'width 0.5s ease',
+                boxShadow: '0 0 20px rgba(255, 200, 87, 0.5)',
               }} />
             </div>
           </div>
         </div>
 
-        {/* Layout */}
+        {/* Main Layout */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(280px, 1fr)',
-          gap: '16px',
+          gridTemplateColumns: activeClass ? 'minmax(0, 2fr) minmax(280px, 1fr)' : '1fr',
+          gap: '20px',
         }} className="class-layout">
-          {/* LEFT: Video */}
-          <div style={{ minWidth: 0 }}>
-            {activeClass ? (
-              <>
-                <div style={{
-                  background: 'black',
-                  borderRadius: '14px',
-                  overflow: 'hidden',
-                  position: 'relative',
-                  aspectRatio: '16/9',
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
-                }}>
-                  <iframe
-                    key={activeClass.docId}
-                    src={`https://www.youtube.com/embed/${activeClass.youtubeId}?rel=0&modestbranding=1`}
-                    title={activeClass.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      border: 0,
-                    }}
-                  />
-                </div>
+          {/* LEFT: Video Player */}
+          {activeClass ? (
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                background: 'black',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                position: 'relative',
+                aspectRatio: '16/9',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.30)',
+              }}>
+                <iframe
+                  key={activeClass.docId}
+                  src={`https://www.youtube.com/embed/${activeClass.youtubeId}?rel=0&modestbranding=1`}
+                  title={activeClass.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 0,
+                  }}
+                />
+              </div>
 
-                {/* Class Info */}
-                <div style={{
-                  background: 'white',
-                  borderRadius: '14px',
-                  padding: '16px',
-                  marginTop: '12px',
-                  boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    flexWrap: 'wrap',
-                    marginBottom: '12px',
-                  }}>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                      <h2 style={{
-                        fontSize: '17px',
-                        fontWeight: '800',
-                        color: '#2D2D3F',
-                        lineHeight: '1.3',
-                        marginBottom: '5px',
-                      }}>
-                        {activeClass.title}
-                      </h2>
-                      {activeClass.duration && (
-                        <p style={{ fontSize: '12px', color: '#6B7280' }}>
-                          ⏱ {activeClass.duration}
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => markComplete(activeClass.docId)}
-                      disabled={completedClasses.includes(activeClass.docId)}
-                      style={{
-                        padding: '9px 16px',
-                        background: completedClasses.includes(activeClass.docId)
-                          ? '#DCFCE7'
-                          : 'linear-gradient(135deg, #22c55e, #16a34a)',
-                        color: completedClasses.includes(activeClass.docId)
-                          ? '#166534'
-                          : 'white',
-                        border: 'none',
-                        borderRadius: '50px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: completedClasses.includes(activeClass.docId)
-                          ? 'default'
-                          : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        boxShadow: completedClasses.includes(activeClass.docId)
-                          ? 'none'
-                          : '0 6px 20px rgba(34, 197, 94, 0.30)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <CheckCircle2 size={13} />
-                      {completedClasses.includes(activeClass.docId)
-                        ? 'সম্পন্ন'
-                        : 'Complete'}
-                    </button>
-                  </div>
-
-                  {activeClass.description && (
-                    <div style={{
-                      padding: '12px',
-                      background: '#F8F9FE',
-                      borderRadius: '10px',
-                      marginBottom: '12px',
-                    }}>
-                      <p style={{
-                        fontSize: '12px',
-                        color: '#4B5563',
-                        lineHeight: '1.7',
-                      }}>
-                        {activeClass.description}
-                      </p>
-                    </div>
-                  )}
-
-                  {activeClass.notesUrl && (
-                    <a
-                      href={activeClass.notesUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '9px 16px',
-                        background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
-                        color: '#92400e',
-                        borderRadius: '50px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        textDecoration: 'none',
-                        boxShadow: '0 4px 12px rgba(255, 200, 87, 0.25)',
-                      }}
-                    >
-                      <FileText size={13} /> Notes PDF
-                    </a>
-                  )}
-
-                  <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    marginTop: '16px',
-                    justifyContent: 'space-between',
-                  }}>
-                    <button
-                      onClick={goPrev}
-                      disabled={classes.findIndex((c) => c.docId === activeClass.docId) === 0}
-                      style={{
-                        padding: '10px 18px',
-                        background: classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                          ? '#F3F4F6'
-                          : 'white',
-                        color: classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                          ? '#9CA3AF'
-                          : '#6C63FF',
-                        border: `2px solid ${
-                          classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                            ? '#F3F4F6'
-                            : '#6C63FF'
-                        }`,
-                        borderRadius: '50px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: classes.findIndex((c) => c.docId === activeClass.docId) === 0
-                          ? 'not-allowed'
-                          : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      ← Previous
-                    </button>
-                    <button
-                      onClick={goNext}
-                      disabled={
-                        classes.findIndex((c) => c.docId === activeClass.docId) ===
-                        classes.length - 1
-                      }
-                      style={{
-                        padding: '10px 18px',
-                        background:
-                          classes.findIndex((c) => c.docId === activeClass.docId) ===
-                          classes.length - 1
-                            ? '#F3F4F6'
-                            : 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-                        color:
-                          classes.findIndex((c) => c.docId === activeClass.docId) ===
-                          classes.length - 1
-                            ? '#9CA3AF'
-                            : 'white',
-                        border: 'none',
-                        borderRadius: '50px',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor:
-                          classes.findIndex((c) => c.docId === activeClass.docId) ===
-                          classes.length - 1
-                            ? 'not-allowed'
-                            : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        boxShadow:
-                          classes.findIndex((c) => c.docId === activeClass.docId) ===
-                          classes.length - 1
-                            ? 'none'
-                            : '0 6px 20px rgba(108, 99, 255, 0.25)',
-                      }}
-                    >
-                      Next →
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
+              {/* Class Info Card */}
               <div style={{
                 background: 'white',
-                borderRadius: '14px',
-                padding: '60px 20px',
-                textAlign: 'center',
-                color: '#6B7280',
+                borderRadius: '16px',
+                padding: '20px',
+                marginTop: '16px',
+                boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
               }}>
-                বাম দিক থেকে Class Select করুন
-              </div>
-            )}
-          </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  flexWrap: 'wrap',
+                  marginBottom: '14px',
+                }}>
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 10px',
+                      background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)',
+                      color: '#6C63FF',
+                      borderRadius: '50px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      marginBottom: '8px',
+                    }}>
+                      <PlayCircle size={11} /> এখন চলছে
+                    </div>
+                    <h2 style={{
+                      fontSize: '18px',
+                      fontWeight: '800',
+                      color: '#2D2D3F',
+                      lineHeight: '1.3',
+                      marginBottom: '5px',
+                    }}>
+                      {activeClass.title}
+                    </h2>
+                    {activeClass.duration && (
+                      <p style={{ fontSize: '12px', color: '#6B7280' }}>
+                        ⏱ {activeClass.duration}
+                      </p>
+                    )}
+                  </div>
 
-          {/* RIGHT: Chapter + Class List */}
+                  <button
+                    onClick={() => markComplete(activeClass.docId)}
+                    disabled={completedClasses.includes(activeClass.docId)}
+                    style={{
+                      padding: '10px 18px',
+                      background: completedClasses.includes(activeClass.docId)
+                        ? '#DCFCE7'
+                        : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                      color: completedClasses.includes(activeClass.docId)
+                        ? '#166534'
+                        : 'white',
+                      border: 'none',
+                      borderRadius: '50px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: completedClasses.includes(activeClass.docId)
+                        ? 'default'
+                        : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: completedClasses.includes(activeClass.docId)
+                        ? 'none'
+                        : '0 6px 20px rgba(34, 197, 94, 0.30)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <CheckCircle2 size={13} />
+                    {completedClasses.includes(activeClass.docId)
+                      ? 'সম্পন্ন ✅'
+                      : 'Complete'}
+                  </button>
+                </div>
+
+                {activeClass.description && (
+                  <div style={{
+                    padding: '14px',
+                    background: '#F8F9FE',
+                    borderRadius: '10px',
+                    marginBottom: '14px',
+                  }}>
+                    <p style={{
+                      fontSize: '13px',
+                      color: '#4B5563',
+                      lineHeight: '1.7',
+                    }}>
+                      {activeClass.description}
+                    </p>
+                  </div>
+                )}
+
+                {activeClass.notesUrl && (
+                  <a
+                    href={activeClass.notesUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '10px 18px',
+                      background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
+                      color: '#92400e',
+                      borderRadius: '50px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      textDecoration: 'none',
+                      boxShadow: '0 4px 12px rgba(255, 200, 87, 0.25)',
+                      marginBottom: '14px',
+                    }}
+                  >
+                    <FileText size={13} /> Notes PDF Download
+                  </a>
+                )}
+
+                {/* Navigation */}
+                <div style={{
+                  display: 'flex',
+                  gap: '10px',
+                  marginTop: '16px',
+                  justifyContent: 'space-between',
+                }}>
+                  <button
+                    onClick={goPrev}
+                    disabled={classes.findIndex((c) => c.docId === activeClass.docId) === 0}
+                    style={{
+                      padding: '11px 20px',
+                      background: classes.findIndex((c) => c.docId === activeClass.docId) === 0
+                        ? '#F3F4F6'
+                        : 'white',
+                      color: classes.findIndex((c) => c.docId === activeClass.docId) === 0
+                        ? '#9CA3AF'
+                        : '#6C63FF',
+                      border: `2px solid ${
+                        classes.findIndex((c) => c.docId === activeClass.docId) === 0
+                          ? '#F3F4F6'
+                          : '#6C63FF'
+                      }`,
+                      borderRadius: '50px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: classes.findIndex((c) => c.docId === activeClass.docId) === 0
+                        ? 'not-allowed'
+                        : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    onClick={goNext}
+                    disabled={
+                      classes.findIndex((c) => c.docId === activeClass.docId) ===
+                      classes.length - 1
+                    }
+                    style={{
+                      padding: '11px 20px',
+                      background:
+                        classes.findIndex((c) => c.docId === activeClass.docId) ===
+                        classes.length - 1
+                          ? '#F3F4F6'
+                          : 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+                      color:
+                        classes.findIndex((c) => c.docId === activeClass.docId) ===
+                        classes.length - 1
+                          ? '#9CA3AF'
+                          : 'white',
+                      border: 'none',
+                      borderRadius: '50px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor:
+                        classes.findIndex((c) => c.docId === activeClass.docId) ===
+                        classes.length - 1
+                          ? 'not-allowed'
+                          : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow:
+                        classes.findIndex((c) => c.docId === activeClass.docId) ===
+                        classes.length - 1
+                          ? 'none'
+                          : '0 6px 20px rgba(108, 99, 255, 0.25)',
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '80px 20px',
+              textAlign: 'center',
+              boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
+            }}>
+              <div style={{ fontSize: '60px', marginBottom: '16px' }}>📚</div>
+              <h3 style={{ fontSize: '18px', color: '#2D2D3F', marginBottom: '8px', fontWeight: '700' }}>
+                কোন Class Select করুন
+              </h3>
+              <p style={{ color: '#6B7280', fontSize: '14px' }}>
+                ডান দিকে Chapter থেকে Class ক্লিক করুন
+              </p>
+            </div>
+          )}
+
+          {/* RIGHT: Chapters & Classes Sidebar */}
           <div
-            className={`class-sidebar ${showSidebar ? 'show' : ''}`}
+            className="class-sidebar"
             style={{
               background: 'white',
-              borderRadius: '14px',
-              padding: '14px',
+              borderRadius: '16px',
               boxShadow: '0 10px 30px rgba(108, 99, 255, 0.08)',
               height: 'fit-content',
               position: 'sticky',
               top: '85px',
               maxHeight: 'calc(100vh - 110px)',
               overflowY: 'auto',
+              overflowX: 'hidden',
             }}
           >
-            <h3 style={{
-              fontSize: '14px',
-              fontWeight: '800',
-              color: '#2D2D3F',
-              marginBottom: '14px',
+            {/* Sidebar Header */}
+            <div style={{
+              padding: '16px 18px',
+              borderBottom: '2px solid #F3F4F6',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, #F8F9FE, #EEF2FF)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
             }}>
-              <BookOpen size={16} color="#6C63FF" />
-              Chapters ({chapters.length})
-            </h3>
+              <h3 style={{
+                fontSize: '14px',
+                fontWeight: '800',
+                color: '#2D2D3F',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <BookOpen size={16} color="#6C63FF" />
+                Course Content
+              </h3>
+              <span style={{
+                padding: '3px 10px',
+                background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+                color: 'white',
+                borderRadius: '50px',
+                fontSize: '10px',
+                fontWeight: '800',
+              }}>
+                {chapters.length} CH
+              </span>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Chapter List */}
+            <div style={{ padding: '10px' }}>
               {chapters.map((ch, chIdx) => {
                 const chClasses = classes.filter((c) => c.chapterId === ch.docId);
                 const isExpanded = expandedChapters.includes(ch.docId);
                 const completedInChapter = chClasses.filter((c) =>
                   completedClasses.includes(c.docId)
                 ).length;
+                const chapterProgress = chClasses.length > 0
+                  ? Math.round((completedInChapter / chClasses.length) * 100) : 0;
 
                 return (
-                  <div key={ch.docId} style={{
-                    borderRadius: '10px',
-                    border: '1px solid #F3F4F6',
-                    overflow: 'hidden',
-                  }}>
+                  <div
+                    key={ch.docId}
+                    style={{
+                      marginBottom: '8px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      background: isExpanded ? '#FAFBFF' : 'white',
+                      border: `2px solid ${isExpanded ? '#6C63FF' : '#F3F4F6'}`,
+                      transition: 'all 0.3s',
+                    }}
+                  >
                     {/* Chapter Header */}
                     <button
                       onClick={() => toggleChapter(ch.docId)}
                       style={{
                         width: '100%',
-                        padding: '11px 12px',
-                        background: isExpanded
-                          ? 'linear-gradient(135deg, #EEF2FF, #E0E7FF)'
-                          : '#F8F9FE',
+                        padding: '14px',
+                        background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '10px',
                         textAlign: 'left',
                       }}
                     >
+                      {/* Chapter Number */}
                       <div style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '8px',
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '10px',
                         background: isExpanded
                           ? 'linear-gradient(135deg, #6C63FF, #5A52D5)'
-                          : 'white',
-                        color: isExpanded ? 'white' : '#6C63FF',
+                          : chapterProgress === 100
+                            ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                            : '#F3F4F6',
+                        color: isExpanded || chapterProgress === 100 ? 'white' : '#6C63FF',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '11px',
+                        fontSize: '14px',
                         fontWeight: '800',
                         flexShrink: 0,
+                        boxShadow: isExpanded
+                          ? '0 6px 15px rgba(108, 99, 255, 0.30)'
+                          : 'none',
                       }}>
-                        {ch.order || chIdx + 1}
+                        {chapterProgress === 100 ? (
+                          <CheckCircle2 size={18} />
+                        ) : (
+                          ch.order || chIdx + 1
+                        )}
                       </div>
+
+                      {/* Chapter Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{
-                          fontSize: '12px',
+                          fontSize: '13px',
                           fontWeight: '700',
                           color: isExpanded ? '#6C63FF' : '#2D2D3F',
+                          marginBottom: '4px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
-                          marginBottom: '2px',
                         }}>
                           {ch.title}
                         </p>
-                        <p style={{
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
                           fontSize: '10px',
                           color: '#6B7280',
+                          fontWeight: '600',
                         }}>
-                          {completedInChapter}/{chClasses.length} সম্পন্ন
-                        </p>
+                          <span>📹 {chClasses.length} Class</span>
+                          {completedInChapter > 0 && (
+                            <span style={{
+                              padding: '1px 6px',
+                              background: '#DCFCE7',
+                              color: '#166534',
+                              borderRadius: '50px',
+                              fontSize: '9px',
+                              fontWeight: '800',
+                            }}>
+                              {completedInChapter}/{chClasses.length} ✅
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      {isExpanded ? (
-                        <ChevronDown size={14} color="#6C63FF" />
-                      ) : (
-                        <ChevronRight size={14} color="#6B7280" />
-                      )}
+
+                      {/* Chevron */}
+                      <div style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        background: isExpanded ? '#6C63FF' : '#F3F4F6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        transition: 'all 0.3s',
+                        transform: isExpanded ? 'rotate(0deg)' : 'rotate(0deg)',
+                      }}>
+                        {isExpanded ? (
+                          <ChevronDown size={14} color="white" />
+                        ) : (
+                          <ChevronRight size={14} color="#6B7280" />
+                        )}
+                      </div>
                     </button>
 
-                    {/* Classes in Chapter */}
+                    {/* Chapter Progress Bar */}
+                    {isExpanded && chClasses.length > 0 && (
+                      <div style={{
+                        padding: '0 14px',
+                        marginBottom: '8px',
+                      }}>
+                        <div style={{
+                          height: '4px',
+                          background: '#F3F4F6',
+                          borderRadius: '50px',
+                          overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${chapterProgress}%`,
+                            background: 'linear-gradient(90deg, #22c55e, #16a34a)',
+                            borderRadius: '50px',
+                            transition: 'width 0.5s',
+                          }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Class List */}
                     {isExpanded && (
                       <div style={{
-                        padding: '6px',
-                        background: 'white',
+                        padding: '0 8px 8px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '4px',
+                        animation: 'slideDown 0.3s ease',
                       }}>
                         {chClasses.length === 0 ? (
-                          <p style={{
-                            fontSize: '11px',
-                            color: '#9CA3AF',
+                          <div style={{
+                            padding: '16px',
                             textAlign: 'center',
-                            padding: '10px',
+                            color: '#9CA3AF',
+                            fontSize: '12px',
                           }}>
-                            কোনো Class নেই
-                          </p>
+                            এই Chapter এ কোনো Class নেই
+                          </div>
                         ) : (
                           chClasses.map((cls, idx) => {
                             const isActive = activeClass?.docId === cls.docId;
                             const isCompleted = completedClasses.includes(cls.docId);
+
                             return (
                               <button
                                 key={cls.docId}
                                 onClick={() => selectClass(cls)}
                                 style={{
-                                  padding: '8px 10px',
+                                  padding: '10px',
                                   background: isActive
                                     ? 'linear-gradient(135deg, #6C63FF, #5A52D5)'
-                                    : 'transparent',
-                                  border: 'none',
-                                  borderRadius: '8px',
+                                    : 'white',
+                                  border: `1px solid ${isActive ? '#6C63FF' : '#F3F4F6'}`,
+                                  borderRadius: '10px',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '8px',
+                                  gap: '10px',
                                   textAlign: 'left',
                                   transition: 'all 0.2s',
+                                  boxShadow: isActive
+                                    ? '0 8px 20px rgba(108, 99, 255, 0.25)'
+                                    : 'none',
                                 }}
                               >
+                                {/* Class Thumbnail */}
                                 <div style={{
-                                  width: '22px',
-                                  height: '22px',
-                                  borderRadius: '50%',
-                                  background: isActive
-                                    ? 'rgba(255,255,255,0.25)'
-                                    : isCompleted
-                                      ? '#DCFCE7'
-                                      : '#F3F4F6',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
+                                  width: '50px',
+                                  height: '34px',
+                                  borderRadius: '6px',
+                                  overflow: 'hidden',
                                   flexShrink: 0,
+                                  background: '#000',
+                                  position: 'relative',
                                 }}>
-                                  {isCompleted && !isActive ? (
-                                    <CheckCircle2 size={12} color="#166534" />
-                                  ) : (
+                                  <img
+                                    src={`https://img.youtube.com/vi/${cls.youtubeId}/mqdefault.jpg`}
+                                    alt=""
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                      opacity: isActive ? 1 : 0.7,
+                                    }}
+                                    onError={(e) => {
+                                      e.target.src = 'https://via.placeholder.com/50x34';
+                                    }}
+                                  />
+                                  {isActive && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      inset: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      background: 'rgba(108, 99, 255, 0.5)',
+                                    }}>
+                                      <PlayCircle size={14} color="white" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Class Info */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    marginBottom: '3px',
+                                  }}>
                                     <span style={{
                                       fontSize: '9px',
                                       fontWeight: '800',
-                                      color: isActive ? 'white' : '#6C63FF',
+                                      color: isActive ? 'rgba(255,255,255,0.8)' : '#9CA3AF',
                                     }}>
-                                      {idx + 1}
+                                      {String(idx + 1).padStart(2, '0')}
                                     </span>
-                                  )}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    {isCompleted && (
+                                      <CheckCircle2
+                                        size={11}
+                                        color={isActive ? '#DCFCE7' : '#22c55e'}
+                                      />
+                                    )}
+                                  </div>
                                   <p style={{
-                                    fontSize: '11px',
+                                    fontSize: '12px',
                                     fontWeight: '600',
                                     color: isActive ? 'white' : '#2D2D3F',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
+                                    marginBottom: '2px',
                                   }}>
                                     {cls.title}
                                   </p>
                                   {cls.duration && (
                                     <p style={{
-                                      fontSize: '9px',
-                                      color: isActive ? 'rgba(255,255,255,0.8)' : '#6B7280',
+                                      fontSize: '10px',
+                                      color: isActive ? 'rgba(255,255,255,0.75)' : '#6B7280',
                                     }}>
                                       ⏱ {cls.duration}
                                     </p>
@@ -772,13 +916,14 @@ const CourseClass = () => {
         <style>{`
           @media (max-width: 992px) {
             .class-layout { grid-template-columns: 1fr !important; }
-            .sidebar-toggle { display: inline-flex !important; }
             .class-sidebar {
-              display: none;
               position: static !important;
               max-height: none !important;
             }
-            .class-sidebar.show { display: block; }
+          }
+          @keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 1000px; }
           }
         `}</style>
       </div>
