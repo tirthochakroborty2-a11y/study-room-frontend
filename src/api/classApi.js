@@ -15,11 +15,7 @@ import { db } from './firebase';
 // ==================== YOUTUBE ID EXTRACT ====================
 export const extractYouTubeId = (url) => {
   if (!url) return null;
-
-  // Already an ID (11 chars)
-  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
-    return url;
-  }
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
 
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
@@ -34,7 +30,74 @@ export const extractYouTubeId = (url) => {
   return null;
 };
 
-// ==================== ADD CLASS ====================
+// ==================== CHAPTERS ====================
+
+// Add Chapter
+export const addChapter = async (data) => {
+  try {
+    const newChapter = {
+      courseId: parseInt(data.courseId),
+      title: data.title,
+      description: data.description || '',
+      order: parseInt(data.order) || 1,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(collection(db, 'chapters'), newChapter);
+    return { success: true, docId: docRef.id };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// Update Chapter
+export const updateChapter = async (docId, data) => {
+  try {
+    await updateDoc(doc(db, 'chapters', docId), {
+      courseId: parseInt(data.courseId),
+      title: data.title,
+      description: data.description || '',
+      order: parseInt(data.order) || 1,
+      updatedAt: serverTimestamp(),
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// Delete Chapter
+export const deleteChapter = async (docId) => {
+  try {
+    await deleteDoc(doc(db, 'chapters', docId));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// Get Chapters By Course
+export const getChaptersByCourse = async (courseId) => {
+  try {
+    const q = query(
+      collection(db, 'chapters'),
+      where('courseId', '==', parseInt(courseId))
+    );
+    const snapshot = await getDocs(q);
+    const chapters = snapshot.docs.map((d) => ({
+      docId: d.id,
+      ...d.data(),
+    }));
+    chapters.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return { success: true, chapters };
+  } catch (error) {
+    return { success: false, error: error.message, chapters: [] };
+  }
+};
+
+// ==================== CLASSES ====================
+
+// Add Class
 export const addClass = async (classData) => {
   try {
     const youtubeId = extractYouTubeId(classData.youtubeUrl);
@@ -44,6 +107,7 @@ export const addClass = async (classData) => {
 
     const newClass = {
       courseId: parseInt(classData.courseId),
+      chapterId: classData.chapterId,
       title: classData.title,
       description: classData.description || '',
       youtubeUrl: classData.youtubeUrl,
@@ -58,12 +122,11 @@ export const addClass = async (classData) => {
     const docRef = await addDoc(collection(db, 'classes'), newClass);
     return { success: true, docId: docRef.id };
   } catch (error) {
-    console.error('Add class error:', error);
     return { success: false, error: error.message };
   }
 };
 
-// ==================== UPDATE CLASS ====================
+// Update Class
 export const updateClass = async (docId, classData) => {
   try {
     const youtubeId = extractYouTubeId(classData.youtubeUrl);
@@ -71,8 +134,9 @@ export const updateClass = async (docId, classData) => {
       return { success: false, error: 'Invalid YouTube URL' };
     }
 
-    const updateData = {
+    await updateDoc(doc(db, 'classes', docId), {
       courseId: parseInt(classData.courseId),
+      chapterId: classData.chapterId,
       title: classData.title,
       description: classData.description || '',
       youtubeUrl: classData.youtubeUrl,
@@ -81,17 +145,14 @@ export const updateClass = async (docId, classData) => {
       order: parseInt(classData.order) || 1,
       notesUrl: classData.notesUrl || null,
       updatedAt: serverTimestamp(),
-    };
-
-    await updateDoc(doc(db, 'classes', docId), updateData);
+    });
     return { success: true };
   } catch (error) {
-    console.error('Update class error:', error);
     return { success: false, error: error.message };
   }
 };
 
-// ==================== DELETE CLASS ====================
+// Delete Class
 export const deleteClass = async (docId) => {
   try {
     await deleteDoc(doc(db, 'classes', docId));
@@ -101,7 +162,7 @@ export const deleteClass = async (docId) => {
   }
 };
 
-// ==================== GET CLASSES BY COURSE ====================
+// Get Classes By Course
 export const getClassesByCourse = async (courseId) => {
   try {
     const q = query(
@@ -113,18 +174,33 @@ export const getClassesByCourse = async (courseId) => {
       docId: d.id,
       ...d.data(),
     }));
-
-    // Sort by order
     classes.sort((a, b) => (a.order || 0) - (b.order || 0));
-
     return { success: true, classes };
   } catch (error) {
-    console.error('Get classes error:', error);
     return { success: false, error: error.message, classes: [] };
   }
 };
 
-// ==================== GET SINGLE CLASS ====================
+// Get Classes By Chapter
+export const getClassesByChapter = async (chapterId) => {
+  try {
+    const q = query(
+      collection(db, 'classes'),
+      where('chapterId', '==', chapterId)
+    );
+    const snapshot = await getDocs(q);
+    const classes = snapshot.docs.map((d) => ({
+      docId: d.id,
+      ...d.data(),
+    }));
+    classes.sort((a, b) => (a.order || 0) - (b.order || 0));
+    return { success: true, classes };
+  } catch (error) {
+    return { success: false, error: error.message, classes: [] };
+  }
+};
+
+// Get Single Class
 export const getClassById = async (docId) => {
   try {
     const docSnap = await getDoc(doc(db, 'classes', docId));
@@ -136,28 +212,6 @@ export const getClassById = async (docId) => {
       classData: { docId: docSnap.id, ...docSnap.data() },
     };
   } catch (error) {
-    return { success: false, error: error.message };
-  }
-};
-
-// ==================== UPDATE COURSE CLASS COUNT ====================
-export const updateCourseClassCount = async (courseId) => {
-  try {
-    const q = query(
-      collection(db, 'classes'),
-      where('courseId', '==', parseInt(courseId))
-    );
-    const snapshot = await getDocs(q);
-    const count = snapshot.size;
-
-    await updateDoc(doc(db, 'courses', String(courseId)), {
-      totalClasses: count,
-      hasClasses: count > 0,
-    });
-
-    return { success: true, count };
-  } catch (error) {
-    console.error('Update count error:', error);
     return { success: false, error: error.message };
   }
 };

@@ -1,17 +1,27 @@
 import { useState, useEffect } from 'react';
 import {
-  Plus, Edit, Trash2, X, Save, PlayCircle, Eye, ExternalLink, Search,
+  Plus, Edit, Trash2, X, Save, PlayCircle, ExternalLink,
+  BookOpen, ChevronDown, ChevronRight, Folder, FolderOpen,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import { useCourses } from '../../context/CourseContext';
 import {
+  addChapter, updateChapter, deleteChapter, getChaptersByCourse,
   addClass, updateClass, deleteClass, getClassesByCourse,
   extractYouTubeId,
 } from '../../api/classApi';
 
-const EMPTY_FORM = {
+const EMPTY_CHAPTER = {
   courseId: '',
+  title: '',
+  description: '',
+  order: 1,
+};
+
+const EMPTY_CLASS = {
+  courseId: '',
+  chapterId: '',
   title: '',
   description: '',
   youtubeUrl: '',
@@ -21,52 +31,152 @@ const EMPTY_FORM = {
 };
 
 const AdminClasses = () => {
-  const { courses, loading: coursesLoading } = useCourses();
+  const { courses } = useCourses();
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [chapters, setChapters] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [expandedChapters, setExpandedChapters] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+
+  // Chapter Modal
+  const [showChapterModal, setShowChapterModal] = useState(false);
+  const [editingChapterId, setEditingChapterId] = useState(null);
+  const [chapterForm, setChapterForm] = useState(EMPTY_CHAPTER);
+
+  // Class Modal
+  const [showClassModal, setShowClassModal] = useState(false);
+  const [editingClassId, setEditingClassId] = useState(null);
+  const [classForm, setClassForm] = useState(EMPTY_CLASS);
+
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (selectedCourse) {
-      loadClasses();
+      loadData();
     } else {
+      setChapters([]);
       setClasses([]);
     }
     // eslint-disable-next-line
   }, [selectedCourse]);
 
-  const loadClasses = async () => {
+  const loadData = async () => {
     setLoading(true);
-    const result = await getClassesByCourse(selectedCourse);
-    if (result.success) setClasses(result.classes);
+    const [chRes, clRes] = await Promise.all([
+      getChaptersByCourse(selectedCourse),
+      getClassesByCourse(selectedCourse),
+    ]);
+    if (chRes.success) {
+      setChapters(chRes.chapters);
+      // Auto expand all chapters
+      setExpandedChapters(chRes.chapters.map((c) => c.docId));
+    }
+    if (clRes.success) setClasses(clRes.classes);
     setLoading(false);
   };
 
-  const openAdd = () => {
-    if (!selectedCourse) {
-      toast.error('আগে Course Select করুন');
-      return;
-    }
-    const nextOrder = classes.length > 0
-      ? Math.max(...classes.map((c) => c.order || 0)) + 1
-      : 1;
+  const toggleChapter = (chapterId) => {
+    setExpandedChapters((prev) =>
+      prev.includes(chapterId)
+        ? prev.filter((id) => id !== chapterId)
+        : [...prev, chapterId]
+    );
+  };
 
-    setForm({
-      ...EMPTY_FORM,
+  // ==================== CHAPTERS ====================
+
+  const openAddChapter = () => {
+    if (!selectedCourse) return toast.error('আগে Course Select করুন');
+    const nextOrder = chapters.length > 0
+      ? Math.max(...chapters.map((c) => c.order || 0)) + 1
+      : 1;
+    setChapterForm({
+      ...EMPTY_CHAPTER,
       courseId: selectedCourse,
       order: nextOrder,
     });
-    setEditingId(null);
-    setShowModal(true);
+    setEditingChapterId(null);
+    setShowChapterModal(true);
   };
 
-  const openEdit = (cls) => {
-    setForm({
+  const openEditChapter = (ch) => {
+    setChapterForm({
+      courseId: ch.courseId,
+      title: ch.title,
+      description: ch.description || '',
+      order: ch.order || 1,
+    });
+    setEditingChapterId(ch.docId);
+    setShowChapterModal(true);
+  };
+
+  const handleSaveChapter = async (e) => {
+    e.preventDefault();
+    if (!chapterForm.title.trim()) return toast.error('Chapter Title দিন');
+
+    setSaving(true);
+    let result;
+    if (editingChapterId) {
+      result = await updateChapter(editingChapterId, chapterForm);
+    } else {
+      result = await addChapter(chapterForm);
+    }
+
+    if (result.success) {
+      toast.success(editingChapterId ? '✅ Chapter Update' : '✅ নতুন Chapter');
+      setShowChapterModal(false);
+      loadData();
+    } else {
+      toast.error(result.error || 'সমস্যা');
+    }
+    setSaving(false);
+  };
+
+  const handleDeleteChapter = async (ch) => {
+    const chClasses = classes.filter((c) => c.chapterId === ch.docId);
+    const msg = chClasses.length > 0
+      ? `"${ch.title}" Chapter এবং এর ${chClasses.length} টি Class মুছে ফেলতে চান?`
+      : `"${ch.title}" Chapter মুছে ফেলতে চান?`;
+
+    if (!window.confirm(msg)) return;
+
+    // Delete all classes in this chapter
+    for (const cls of chClasses) {
+      await deleteClass(cls.docId);
+    }
+    // Delete chapter
+    const result = await deleteChapter(ch.docId);
+    if (result.success) {
+      toast.success('Chapter এবং Classes মুছে ফেলা হয়েছে');
+      loadData();
+    }
+  };
+
+  // ==================== CLASSES ====================
+
+  const openAddClass = (chapterId = '') => {
+    if (!selectedCourse) return toast.error('আগে Course Select করুন');
+    if (!chapterId) return toast.error('আগে Chapter Select করুন');
+
+    const chClasses = classes.filter((c) => c.chapterId === chapterId);
+    const nextOrder = chClasses.length > 0
+      ? Math.max(...chClasses.map((c) => c.order || 0)) + 1
+      : 1;
+
+    setClassForm({
+      ...EMPTY_CLASS,
+      courseId: selectedCourse,
+      chapterId: chapterId,
+      order: nextOrder,
+    });
+    setEditingClassId(null);
+    setShowClassModal(true);
+  };
+
+  const openEditClass = (cls) => {
+    setClassForm({
       courseId: cls.courseId,
+      chapterId: cls.chapterId,
       title: cls.title,
       description: cls.description || '',
       youtubeUrl: cls.youtubeUrl,
@@ -74,96 +184,98 @@ const AdminClasses = () => {
       order: cls.order || 1,
       notesUrl: cls.notesUrl || '',
     });
-    setEditingId(cls.docId);
-    setShowModal(true);
+    setEditingClassId(cls.docId);
+    setShowClassModal(true);
   };
 
-  const handleSave = async (e) => {
+  const handleSaveClass = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return toast.error('Class Title দিন');
-    if (!form.youtubeUrl.trim()) return toast.error('YouTube Link দিন');
+    if (!classForm.title.trim()) return toast.error('Class Title দিন');
+    if (!classForm.youtubeUrl.trim()) return toast.error('YouTube Link দিন');
 
-    const ytId = extractYouTubeId(form.youtubeUrl);
+    const ytId = extractYouTubeId(classForm.youtubeUrl);
     if (!ytId) return toast.error('সঠিক YouTube Link দিন');
 
     setSaving(true);
-
     let result;
-    if (editingId) {
-      result = await updateClass(editingId, form);
+    if (editingClassId) {
+      result = await updateClass(editingClassId, classForm);
     } else {
-      result = await addClass(form);
+      result = await addClass(classForm);
     }
 
     if (result.success) {
-      toast.success(editingId ? '✅ Class Update হয়েছে' : '✅ নতুন Class যোগ হয়েছে');
-      setShowModal(false);
-      loadClasses();
+      toast.success(editingClassId ? '✅ Class Update' : '✅ নতুন Class');
+      setShowClassModal(false);
+      loadData();
     } else {
-      toast.error(result.error || 'সমস্যা হয়েছে');
+      toast.error(result.error || 'সমস্যা');
     }
-
     setSaving(false);
   };
 
-  const handleDelete = async (docId, title) => {
+  const handleDeleteClass = async (docId, title) => {
     if (!window.confirm(`"${title}" Class মুছে ফেলতে চান?`)) return;
     const result = await deleteClass(docId);
     if (result.success) {
       toast.success('Class মুছে ফেলা হয়েছে');
-      loadClasses();
-    } else {
-      toast.error('সমস্যা হয়েছে');
+      loadData();
     }
   };
 
-  const updateField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
   const selectedCourseData = courses.find((c) => c.id === parseInt(selectedCourse));
-  const ytPreviewId = extractYouTubeId(form.youtubeUrl);
+  const ytPreviewId = extractYouTubeId(classForm.youtubeUrl);
+  const totalClasses = classes.length;
 
   return (
     <section style={{
-      padding: '100px 0 60px',
+      padding: '90px 0 60px',
       background: '#F8F9FE',
       minHeight: '100vh',
     }}>
       <div className="container">
-        <div style={{ marginBottom: '24px' }}>
-          <h1 style={{
-            fontSize: 'clamp(22px, 4vw, 30px)',
-            fontWeight: '800',
-            color: '#2D2D3F',
-            marginBottom: '6px',
-          }}>
-            🎓 ক্লাস ম্যানেজমেন্ট
-          </h1>
-          <p style={{ color: '#6B7280', fontSize: '14px' }}>
-            Course এর Class যোগ করুন (YouTube Link দিয়ে)
-          </p>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+          marginBottom: '20px',
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: 'clamp(20px, 4vw, 26px)',
+              fontWeight: '800',
+              color: '#2D2D3F',
+              marginBottom: '4px',
+            }}>
+              🎓 ক্লাস ম্যানেজমেন্ট
+            </h1>
+            <p style={{ color: '#6B7280', fontSize: '13px' }}>
+              Chapter + Class Structure
+            </p>
+          </div>
         </div>
 
         <div style={{
           display: 'grid',
           gridTemplateColumns: '240px 1fr',
-          gap: '24px',
+          gap: '20px',
         }} className="admin-layout">
           <AdminSidebar />
 
-          <div>
+          <div style={{ minWidth: 0 }}>
             {/* Course Selector */}
             <div style={{
               background: 'white',
               borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px',
-              boxShadow: '0 10px 40px rgba(108, 99, 255, 0.08)',
+              padding: '16px',
+              marginBottom: '16px',
+              boxShadow: '0 8px 30px rgba(108, 99, 255, 0.08)',
             }}>
               <label style={{
                 display: 'block',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: '700',
                 color: '#2D2D3F',
                 marginBottom: '8px',
@@ -175,13 +287,14 @@ const AdminClasses = () => {
                 onChange={(e) => setSelectedCourse(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '12px 16px',
+                  padding: '12px 14px',
                   border: '2px solid #E5E7EB',
                   borderRadius: '10px',
                   fontSize: '14px',
                   outline: 'none',
                   cursor: 'pointer',
                   fontWeight: '600',
+                  background: 'white',
                 }}
               >
                 <option value="">— Course Select করুন —</option>
@@ -194,76 +307,78 @@ const AdminClasses = () => {
 
               {selectedCourseData && (
                 <div style={{
-                  marginTop: '16px',
-                  padding: '12px',
-                  background: '#EEF2FF',
-                  borderRadius: '10px',
+                  marginTop: '12px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
+                  padding: '10px',
+                  background: '#EEF2FF',
+                  borderRadius: '10px',
                   flexWrap: 'wrap',
                 }}>
                   <img
                     src={selectedCourseData.image}
                     alt=""
                     style={{
-                      width: '50px',
-                      height: '50px',
+                      width: '44px',
+                      height: '44px',
                       borderRadius: '10px',
                       objectFit: 'cover',
+                      flexShrink: 0,
                     }}
                   />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: '120px' }}>
                     <p style={{
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: '700',
                       color: '#2D2D3F',
                       marginBottom: '2px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}>
                       {selectedCourseData.name}
                     </p>
-                    <p style={{ fontSize: '12px', color: '#6C63FF', fontWeight: '600' }}>
-                      📹 {classes.length} টি Class
+                    <p style={{ fontSize: '11px', color: '#6C63FF', fontWeight: '600' }}>
+                      📖 {chapters.length} Chapter • 📹 {totalClasses} Class
                     </p>
                   </div>
                   <button
-                    onClick={openAdd}
+                    onClick={openAddChapter}
                     style={{
-                      padding: '10px 18px',
+                      padding: '10px 16px',
                       background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '50px',
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: '700',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
                       boxShadow: '0 6px 20px rgba(108, 99, 255, 0.25)',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    <Plus size={14} /> নতুন Class
+                    <Plus size={14} /> Chapter
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Classes List */}
+            {/* Content */}
             {!selectedCourse ? (
               <div style={{
                 background: 'white',
                 borderRadius: '16px',
-                padding: '80px 20px',
+                padding: '60px 20px',
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: '60px', marginBottom: '16px' }}>🎓</div>
-                <h3 style={{ fontSize: '18px', color: '#2D2D3F', marginBottom: '8px' }}>
+                <div style={{ fontSize: '60px', marginBottom: '16px' }}>📚</div>
+                <h3 style={{ fontSize: '17px', color: '#2D2D3F', marginBottom: '8px' }}>
                   Course Select করুন
                 </h3>
-                <p style={{ color: '#6B7280', fontSize: '14px' }}>
-                  উপরে থেকে Course Select করলে Class List দেখা যাবে
-                </p>
               </div>
             ) : loading ? (
               <div style={{
@@ -275,19 +390,19 @@ const AdminClasses = () => {
               }}>
                 লোড হচ্ছে...
               </div>
-            ) : classes.length === 0 ? (
+            ) : chapters.length === 0 ? (
               <div style={{
                 background: 'white',
                 borderRadius: '16px',
                 padding: '60px 20px',
                 textAlign: 'center',
               }}>
-                <div style={{ fontSize: '60px', marginBottom: '16px' }}>📹</div>
-                <h3 style={{ fontSize: '18px', color: '#2D2D3F', marginBottom: '8px' }}>
-                  এই Course এ কোনো Class নেই
+                <div style={{ fontSize: '60px', marginBottom: '16px' }}>📖</div>
+                <h3 style={{ fontSize: '17px', color: '#2D2D3F', marginBottom: '8px' }}>
+                  এখনো Chapter যোগ করা হয়নি
                 </h3>
                 <button
-                  onClick={openAdd}
+                  onClick={openAddChapter}
                   style={{
                     marginTop: '16px',
                     padding: '12px 24px',
@@ -300,169 +415,312 @@ const AdminClasses = () => {
                     cursor: 'pointer',
                   }}
                 >
-                  ➕ প্রথম Class যোগ করুন
+                  ➕ প্রথম Chapter যোগ করুন
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {classes.map((cls, idx) => (
-                  <div
-                    key={cls.docId}
-                    style={{
-                      background: 'white',
-                      borderRadius: '14px',
-                      padding: '16px',
-                      display: 'flex',
-                      gap: '14px',
-                      alignItems: 'center',
-                      boxShadow: '0 6px 20px rgba(108, 99, 255, 0.06)',
-                      border: '2px solid #F3F4F6',
-                      transition: 'all 0.3s',
-                    }}
-                  >
-                    <div style={{
-                      width: '50px',
-                      height: '50px',
-                      borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '20px',
-                      fontWeight: '800',
-                      flexShrink: 0,
-                      boxShadow: '0 6px 15px rgba(108, 99, 255, 0.30)',
-                    }}>
-                      {cls.order || idx + 1}
-                    </div>
+                {chapters.map((ch, chIdx) => {
+                  const chClasses = classes.filter((c) => c.chapterId === ch.docId);
+                  const isExpanded = expandedChapters.includes(ch.docId);
 
-                    <div style={{
-                      width: '120px',
-                      height: '70px',
-                      borderRadius: '10px',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      background: '#F3F4F6',
-                      position: 'relative',
-                    }}>
-                      <img
-                        src={`https://img.youtube.com/vi/${cls.youtubeId}/mqdefault.jpg`}
-                        alt={cls.title}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                        }}
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/120x70/6C63FF/FFFFFF?text=YT';
-                        }}
-                      />
-                      <div style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'rgba(0,0,0,0.3)',
-                      }}>
-                        <PlayCircle size={24} color="white" />
-                      </div>
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={{
-                        fontSize: '15px',
-                        fontWeight: '700',
-                        color: '#2D2D3F',
-                        marginBottom: '4px',
+                  return (
+                    <div
+                      key={ch.docId}
+                      style={{
+                        background: 'white',
+                        borderRadius: '14px',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {cls.title}
-                      </h3>
-                      {cls.duration && (
-                        <p style={{
-                          fontSize: '12px',
-                          color: '#6B7280',
-                          marginBottom: '2px',
+                        boxShadow: '0 6px 20px rgba(108, 99, 255, 0.06)',
+                        border: '2px solid #F3F4F6',
+                      }}
+                    >
+                      {/* Chapter Header */}
+                      <div
+                        style={{
+                          padding: '14px 16px',
+                          background: isExpanded
+                            ? 'linear-gradient(135deg, #EEF2FF, #E0E7FF)'
+                            : 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          cursor: 'pointer',
+                          flexWrap: 'wrap',
+                        }}
+                        onClick={() => toggleChapter(ch.docId)}
+                      >
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '10px',
+                          background: isExpanded
+                            ? 'linear-gradient(135deg, #6C63FF, #5A52D5)'
+                            : '#F3F4F6',
+                          color: isExpanded ? 'white' : '#6C63FF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          fontWeight: '800',
+                          fontSize: '15px',
                         }}>
-                          ⏱ {cls.duration}
-                        </p>
-                      )}
-                      <p style={{
-                        fontSize: '11px',
-                        color: '#9CA3AF',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        🎬 {cls.youtubeId}
-                      </p>
-                    </div>
+                          {ch.order || chIdx + 1}
+                        </div>
 
-                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                      <a
-                        href={`https://www.youtube.com/watch?v=${cls.youtubeId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="YouTube এ দেখুন"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: '#FEE2E2',
-                          color: '#991B1B',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <ExternalLink size={14} />
-                      </a>
-                      <button
-                        onClick={() => openEdit(cls)}
-                        title="Edit"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: '#EEF2FF',
-                          color: '#6C63FF',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(cls.docId, cls.title)}
-                        title="Delete"
-                        style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: '#FEE2E2',
-                          color: '#ef4444',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                        <div style={{ flex: 1, minWidth: '150px' }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            marginBottom: '3px',
+                          }}>
+                            {isExpanded ? (
+                              <ChevronDown size={16} color="#6C63FF" />
+                            ) : (
+                              <ChevronRight size={16} color="#6B7280" />
+                            )}
+                            <h3 style={{
+                              fontSize: '15px',
+                              fontWeight: '700',
+                              color: isExpanded ? '#6C63FF' : '#2D2D3F',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {ch.title}
+                            </h3>
+                          </div>
+                          <p style={{
+                            fontSize: '11px',
+                            color: '#6B7280',
+                            paddingLeft: '22px',
+                          }}>
+                            📹 {chClasses.length} টি Class
+                          </p>
+                        </div>
+
+                        <div
+                          style={{ display: 'flex', gap: '5px' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={() => openAddClass(ch.docId)}
+                            title="Class Add"
+                            style={{
+                              padding: '7px 10px',
+                              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Plus size={12} /> Class
+                          </button>
+                          <button
+                            onClick={() => openEditChapter(ch)}
+                            title="Edit"
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: '#EEF2FF',
+                              color: '#6C63FF',
+                              border: 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Edit size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChapter(ch)}
+                            title="Delete"
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: '#FEE2E2',
+                              color: '#ef4444',
+                              border: 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Chapter Classes */}
+                      {isExpanded && (
+                        <div style={{
+                          padding: '12px 16px',
+                          background: '#FAFBFF',
+                          borderTop: '1px solid #F3F4F6',
+                        }}>
+                          {chClasses.length === 0 ? (
+                            <div style={{
+                              padding: '20px',
+                              textAlign: 'center',
+                              color: '#9CA3AF',
+                              fontSize: '13px',
+                            }}>
+                              এই Chapter এ কোনো Class নেই —{' '}
+                              <span
+                                onClick={() => openAddClass(ch.docId)}
+                                style={{
+                                  color: '#6C63FF',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                }}
+                              >
+                                Class যোগ করুন
+                              </span>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {chClasses.map((cls, idx) => (
+                                <div
+                                  key={cls.docId}
+                                  style={{
+                                    background: 'white',
+                                    borderRadius: '10px',
+                                    padding: '10px 12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    border: '1px solid #F3F4F6',
+                                  }}
+                                >
+                                  <span style={{
+                                    fontSize: '11px',
+                                    fontWeight: '800',
+                                    color: '#6C63FF',
+                                    minWidth: '22px',
+                                  }}>
+                                    {String(idx + 1).padStart(2, '0')}
+                                  </span>
+
+                                  <div style={{
+                                    width: '60px',
+                                    height: '38px',
+                                    borderRadius: '6px',
+                                    overflow: 'hidden',
+                                    flexShrink: 0,
+                                    background: '#000',
+                                    position: 'relative',
+                                  }}>
+                                    <img
+                                      src={`https://img.youtube.com/vi/${cls.youtubeId}/mqdefault.jpg`}
+                                      alt=""
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                      }}
+                                      onError={(e) => {
+                                        e.target.src = 'https://via.placeholder.com/60x38';
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{
+                                      fontSize: '13px',
+                                      fontWeight: '700',
+                                      color: '#2D2D3F',
+                                      marginBottom: '2px',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      {cls.title}
+                                    </p>
+                                    {cls.duration && (
+                                      <p style={{ fontSize: '10px', color: '#6B7280' }}>
+                                        ⏱ {cls.duration}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                    <a
+                                      href={`https://www.youtube.com/watch?v=${cls.youtubeId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title="YouTube"
+                                      style={{
+                                        width: '30px',
+                                        height: '30px',
+                                        borderRadius: '6px',
+                                        background: '#FEE2E2',
+                                        color: '#991B1B',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        textDecoration: 'none',
+                                      }}
+                                    >
+                                      <ExternalLink size={12} />
+                                    </a>
+                                    <button
+                                      onClick={() => openEditClass(cls)}
+                                      title="Edit"
+                                      style={{
+                                        width: '30px',
+                                        height: '30px',
+                                        borderRadius: '6px',
+                                        background: '#EEF2FF',
+                                        color: '#6C63FF',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <Edit size={12} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteClass(cls.docId, cls.title)}
+                                      title="Delete"
+                                      style={{
+                                        width: '30px',
+                                        height: '30px',
+                                        borderRadius: '6px',
+                                        background: '#FEE2E2',
+                                        color: '#ef4444',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -472,13 +730,16 @@ const AdminClasses = () => {
           @media (max-width: 992px) {
             .admin-layout { grid-template-columns: 1fr !important; }
           }
+          @media (max-width: 480px) {
+            .admin-layout { gap: 12px !important; }
+          }
         `}</style>
       </div>
 
-      {/* MODAL */}
-      {showModal && (
+      {/* ==================== CHAPTER MODAL ==================== */}
+      {showChapterModal && (
         <div
-          onClick={() => !saving && setShowModal(false)}
+          onClick={() => !saving && setShowChapterModal(false)}
           style={{
             position: 'fixed',
             inset: 0,
@@ -488,7 +749,7 @@ const AdminClasses = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px',
+            padding: '16px',
           }}
         >
           <div
@@ -496,7 +757,7 @@ const AdminClasses = () => {
             style={{
               background: 'white',
               borderRadius: '16px',
-              maxWidth: '560px',
+              maxWidth: '480px',
               width: '100%',
               maxHeight: '90vh',
               overflowY: 'auto',
@@ -504,20 +765,28 @@ const AdminClasses = () => {
             }}
           >
             <div style={{
-              padding: '20px 24px',
+              padding: '18px 20px',
               borderBottom: '1px solid #E5E7EB',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#2D2D3F' }}>
-                {editingId ? '✏️ Class Edit' : '➕ নতুন Class'}
+              <h2 style={{
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#2D2D3F',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <BookOpen size={18} color="#6C63FF" />
+                {editingChapterId ? 'Chapter Edit' : 'নতুন Chapter'}
               </h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => setShowChapterModal(false)}
                 style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '30px',
+                  height: '30px',
                   borderRadius: '50%',
                   background: '#F3F4F6',
                   border: 'none',
@@ -527,18 +796,152 @@ const AdminClasses = () => {
                   justifyContent: 'center',
                 }}
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleSave} style={{ padding: '24px' }}>
-              <div style={{ display: 'grid', gap: '16px' }}>
+            <form onSubmit={handleSaveChapter} style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gap: '14px' }}>
+                <Field label="Chapter Title *">
+                  <input
+                    type="text"
+                    value={chapterForm.title}
+                    onChange={(e) =>
+                      setChapterForm({ ...chapterForm, title: e.target.value })
+                    }
+                    placeholder="যেমন: Vector, গতিবিদ্যা"
+                    style={inputStyle}
+                  />
+                </Field>
+
+                <Field label="Description (Optional)">
+                  <textarea
+                    value={chapterForm.description}
+                    onChange={(e) =>
+                      setChapterForm({ ...chapterForm, description: e.target.value })
+                    }
+                    placeholder="এই Chapter এ যা যা থাকবে..."
+                    rows={2}
+                    style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </Field>
+
+                <Field label="Order">
+                  <input
+                    type="number"
+                    value={chapterForm.order}
+                    onChange={(e) =>
+                      setChapterForm({ ...chapterForm, order: e.target.value })
+                    }
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowChapterModal(false)}
+                  style={cancelBtnStyle}
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    ...primaryBtnStyle,
+                    background: saving
+                      ? '#9CA3AF'
+                      : 'linear-gradient(135deg, #6C63FF, #5A52D5)',
+                  }}
+                >
+                  {saving ? '⏳...' : (
+                    <>
+                      <Save size={14} /> {editingChapterId ? 'Update' : 'যোগ করুন'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== CLASS MODAL ==================== */}
+      {showClassModal && (
+        <div
+          onClick={() => !saving && setShowClassModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            }}
+          >
+            <div style={{
+              padding: '18px 20px',
+              borderBottom: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <h2 style={{
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#2D2D3F',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <PlayCircle size={18} color="#6C63FF" />
+                {editingClassId ? 'Class Edit' : 'নতুন Class'}
+              </h2>
+              <button
+                onClick={() => setShowClassModal(false)}
+                style={{
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '50%',
+                  background: '#F3F4F6',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveClass} style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gap: '14px' }}>
                 <Field label="Class Title *">
                   <input
                     type="text"
-                    value={form.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                    placeholder="যেমন: Introduction to Physics"
+                    value={classForm.title}
+                    onChange={(e) =>
+                      setClassForm({ ...classForm, title: e.target.value })
+                    }
+                    placeholder="যেমন: Introduction to Vector"
                     style={inputStyle}
                   />
                 </Field>
@@ -546,22 +949,16 @@ const AdminClasses = () => {
                 <Field label="YouTube Video Link *">
                   <input
                     type="text"
-                    value={form.youtubeUrl}
-                    onChange={(e) => updateField('youtubeUrl', e.target.value)}
+                    value={classForm.youtubeUrl}
+                    onChange={(e) =>
+                      setClassForm({ ...classForm, youtubeUrl: e.target.value })
+                    }
                     placeholder="https://www.youtube.com/watch?v=xxxxx"
                     style={inputStyle}
                   />
-                  <p style={{
-                    fontSize: '11px',
-                    color: '#6B7280',
-                    marginTop: '4px',
-                  }}>
-                    💡 youtube.com/watch, youtu.be, embed সব Format কাজ করবে
-                  </p>
-
                   {ytPreviewId && (
                     <div style={{
-                      marginTop: '12px',
+                      marginTop: '10px',
                       borderRadius: '10px',
                       overflow: 'hidden',
                       position: 'relative',
@@ -580,39 +977,40 @@ const AdminClasses = () => {
                       />
                       <div style={{
                         position: 'absolute',
-                        bottom: '8px',
-                        left: '8px',
-                        padding: '4px 10px',
+                        bottom: '6px',
+                        left: '6px',
+                        padding: '3px 8px',
                         background: 'rgba(0,0,0,0.75)',
                         color: 'white',
                         borderRadius: '50px',
-                        fontSize: '11px',
+                        fontSize: '10px',
                         fontWeight: '700',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
                       }}>
-                        <PlayCircle size={12} /> Video ID: {ytPreviewId}
+                        ID: {ytPreviewId}
                       </div>
                     </div>
                   )}
                 </Field>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <Field label="Duration">
                     <input
                       type="text"
-                      value={form.duration}
-                      onChange={(e) => updateField('duration', e.target.value)}
+                      value={classForm.duration}
+                      onChange={(e) =>
+                        setClassForm({ ...classForm, duration: e.target.value })
+                      }
                       placeholder="45 min"
                       style={inputStyle}
                     />
                   </Field>
-                  <Field label="Class Order">
+                  <Field label="Order">
                     <input
                       type="number"
-                      value={form.order}
-                      onChange={(e) => updateField('order', e.target.value)}
+                      value={classForm.order}
+                      onChange={(e) =>
+                        setClassForm({ ...classForm, order: e.target.value })
+                      }
                       style={inputStyle}
                     />
                   </Field>
@@ -620,40 +1018,34 @@ const AdminClasses = () => {
 
                 <Field label="Description (Optional)">
                   <textarea
-                    value={form.description}
-                    onChange={(e) => updateField('description', e.target.value)}
-                    placeholder="এই Class এ যা যা থাকবে..."
-                    rows={3}
+                    value={classForm.description}
+                    onChange={(e) =>
+                      setClassForm({ ...classForm, description: e.target.value })
+                    }
+                    placeholder="এই Class এ..."
+                    rows={2}
                     style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
                   />
                 </Field>
 
-                <Field label="Notes PDF Link (Optional)">
+                <Field label="Notes PDF (Optional)">
                   <input
                     type="text"
-                    value={form.notesUrl}
-                    onChange={(e) => updateField('notesUrl', e.target.value)}
+                    value={classForm.notesUrl}
+                    onChange={(e) =>
+                      setClassForm({ ...classForm, notesUrl: e.target.value })
+                    }
                     placeholder="https://drive.google.com/..."
                     style={inputStyle}
                   />
                 </Field>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: '#F3F4F6',
-                    color: '#2D2D3F',
-                    border: 'none',
-                    borderRadius: '50px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
+                  onClick={() => setShowClassModal(false)}
+                  style={cancelBtnStyle}
                 >
                   বাতিল
                 </button>
@@ -661,26 +1053,15 @@ const AdminClasses = () => {
                   type="submit"
                   disabled={saving}
                   style={{
-                    flex: 1,
-                    padding: '14px',
+                    ...primaryBtnStyle,
                     background: saving
                       ? '#9CA3AF'
                       : 'linear-gradient(135deg, #6C63FF, #5A52D5)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '50px',
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    cursor: saving ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
                   }}
                 >
-                  {saving ? '⏳ সেভ হচ্ছে...' : (
+                  {saving ? '⏳...' : (
                     <>
-                      <Save size={16} /> {editingId ? 'Update' : 'যোগ করুন'}
+                      <Save size={14} /> {editingClassId ? 'Update' : 'যোগ করুন'}
                     </>
                   )}
                 </button>
@@ -702,13 +1083,41 @@ const inputStyle = {
   outline: 'none',
   fontFamily: 'inherit',
   background: 'white',
+  boxSizing: 'border-box',
+};
+
+const cancelBtnStyle = {
+  flex: 1,
+  padding: '12px',
+  background: '#F3F4F6',
+  color: '#2D2D3F',
+  border: 'none',
+  borderRadius: '50px',
+  fontSize: '13px',
+  fontWeight: '600',
+  cursor: 'pointer',
+};
+
+const primaryBtnStyle = {
+  flex: 1,
+  padding: '12px',
+  color: 'white',
+  border: 'none',
+  borderRadius: '50px',
+  fontSize: '13px',
+  fontWeight: '700',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '6px',
 };
 
 const Field = ({ label, children }) => (
   <div>
     <label style={{
       display: 'block',
-      fontSize: '13px',
+      fontSize: '12px',
       fontWeight: '600',
       color: '#2D2D3F',
       marginBottom: '6px',
