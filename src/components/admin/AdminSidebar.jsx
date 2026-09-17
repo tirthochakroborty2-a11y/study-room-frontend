@@ -1,37 +1,73 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, BookOpen, ArrowLeft } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Users,
+  BookOpen,
+  PlayCircle,
+  ArrowLeft,
+} from 'lucide-react';
 
 const AdminSidebar = () => {
   const menuItems = [
-    { to: '/admin', label: 'ড্যাশবোর্ড', icon: <LayoutDashboard size={20} />, end: true },
-    { to: '/admin/orders', label: 'অর্ডারসমূহ', icon: <ShoppingBag size={20} /> },
-    { to: '/admin/users', label: 'ইউজারসমূহ', icon: <Users size={20} /> },
-    { to: '/admin/courses', label: 'কোর্সসমূহ', icon: <BookOpen size={20} /> },
+    {
+      to: '/admin',
+      label: 'ড্যাশবোর্ড',
+      icon: <LayoutDashboard size={20} />,
+      end: true,
+    },
+    {
+      to: '/admin/orders',
+      label: 'অর্ডারসমূহ',
+      icon: <ShoppingBag size={20} />,
+    },
+    {
+      to: '/admin/users',
+      label: 'ইউজারসমূহ',
+      icon: <Users size={20} />,
+    },
+    {
+      to: '/admin/courses',
+      label: 'কোর্সসমূহ',
+      icon: <BookOpen size={20} />,
+    },
+    {
+      to: '/admin/classes',
+      label: 'ক্লাসসমূহ',
+      icon: <PlayCircle size={20} />,
+    },
   ];
 
   return (
-    <aside style={{
-      width: '240px',
-      background: 'white',
-      borderRadius: '16px',
-      padding: '20px',
-      boxShadow: '0 10px 40px rgba(108, 99, 255, 0.10)',
-      height: 'fit-content',
-      position: 'sticky',
-      top: '90px',
-    }} className="admin-sidebar">
-      <div style={{
-        paddingBottom: '16px',
-        marginBottom: '16px',
-        borderBottom: '1px solid #E5E7EB',
-      }}>
-        <h3 style={{
-          fontSize: '13px',
-          color: '#6B7280',
-          fontWeight: '600',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}>
+    <aside
+      style={{
+        width: '240px',
+        background: 'white',
+        borderRadius: '16px',
+        padding: '20px',
+        boxShadow: '0 10px 40px rgba(108, 99, 255, 0.10)',
+        height: 'fit-content',
+        position: 'sticky',
+        top: '90px',
+      }}
+      className="admin-sidebar"
+    >
+      <div
+        style={{
+          paddingBottom: '16px',
+          marginBottom: '16px',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <h3
+          style={{
+            fontSize: '13px',
+            color: '#6B7280',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}
+        >
           👑 Admin Panel
         </h3>
       </div>
@@ -67,11 +103,13 @@ const AdminSidebar = () => {
         ))}
       </nav>
 
-      <div style={{
-        marginTop: '20px',
-        paddingTop: '16px',
-        borderTop: '1px solid #E5E7EB',
-      }}>
+      <div
+        style={{
+          marginTop: '20px',
+          paddingTop: '16px',
+          borderTop: '1px solid #E5E7EB',
+        }}
+      >
         <NavLink
           to="/"
           style={{

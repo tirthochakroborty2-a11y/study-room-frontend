@@ -9,6 +9,7 @@ import CourseDetails from './pages/CourseDetails';
 import Payment from './pages/Payment';
 import MyCourses from './pages/MyCourses';
 import OrderDetails from './pages/OrderDetails';
+import CourseClass from './pages/CourseClass';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
 
@@ -17,6 +18,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminUserDetails from './pages/admin/AdminUserDetails';
 import AdminCourses from './pages/admin/AdminCourses';
+import AdminClasses from './pages/admin/AdminClasses';
 
 function App() {
   return (
@@ -59,6 +61,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/class/:courseId"
+            element={
+              <ProtectedRoute>
+                <CourseClass />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ==================== ADMIN ROUTES ==================== */}
           <Route
@@ -98,6 +108,14 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <AdminCourses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/classes"
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminClasses />
               </ProtectedRoute>
             }
           />
